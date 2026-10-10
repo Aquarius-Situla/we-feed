@@ -10,6 +10,7 @@ from core.auth import get_current_user
 from core.config import cfg
 from apis.base import format_search_kw
 from core.print import print_error,print_success
+from core.wx.model.weread_mp import clean_article_title
 
 
 def clamp_rss_limit(limit: int) -> int:
@@ -259,7 +260,7 @@ async def get_mp_articles_source(
         cst = timezone(timedelta(hours=8))
         rss_list = [{
             "id": str(article.id),
-            "title": clean_article_title(article.title or "") or "???",
+            "title": clean_article_title(article.title or "") or (article.title or ""),
             "link":  f"{rss_domain}/views/article/{article.id}" if cfg.get("rss.local",False) else (article.url or "").replace("~", "_"),
             "description": clean_article_title(article.title or "") if (article.description or "") == (article.title or "") else (article.description or ""),
             "content": article.content or "",

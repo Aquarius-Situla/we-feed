@@ -15,7 +15,7 @@ from core.wx.model.weread import MpsWeread
 WEREAD_WEB_BASE = "https://weread.qq.com"
 
 def clean_article_title(raw_title: str, max_length: int = 120) -> str:
-    """?????????????????????????????"""
+    """清洗文章标题，防止短图文将整段正文当作标题"""
     if not raw_title:
         return ""
     lines = [line.strip() for line in raw_title.splitlines() if line.strip()]
@@ -23,7 +23,7 @@ def clean_article_title(raw_title: str, max_length: int = 120) -> str:
         return ""
     first_line = lines[0]
     if len(first_line) > max_length:
-        sentences = re.split(r'([???!?])', first_line)
+        sentences = re.split(r'([。！？!?])', first_line)
         if len(sentences) >= 2 and len(sentences[0] + sentences[1]) <= max_length:
             first_line = sentences[0] + sentences[1]
         else:
