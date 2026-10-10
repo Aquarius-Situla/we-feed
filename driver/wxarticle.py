@@ -132,7 +132,20 @@ class WXArticleFetcher:
                 title = await page.locator('meta[property="og:title"]').get_attribute("content")
                 author = await page.locator('meta[property="og:article:author"]').get_attribute("content")
                 description = await page.locator('meta[property="og:description"]').get_attribute("content")
-                topic_image = await page.locator('meta[property="twitter:image"]').get_attribute("content")
+                topic_image = ""
+                try:
+                    topic_image = await page.locator('meta[property="og:image"]').get_attribute("content", timeout=2000)
+                except Exception:
+                    pass
+                if not topic_image:
+                    try:
+                        topic_image = await page.locator('meta[property="twitter:image"]').get_attribute("content", timeout=2000)
+                    except Exception:
+                        pass
+                if not topic_image and body:
+                    m_cdn = re.search(r'var\s+msg_cdn_url\s*=\s*["\'](https?://[^"\']+)["\']', body)
+                    if m_cdn:
+                        topic_image = m_cdn.group(1)
 
                 if not title:
                     title = await page.evaluate('() => document.title')
@@ -584,9 +597,10 @@ class Web:
                     # 清除所有属性
                     img_tag.attrs = {}
 
-                    # 只设置src和style属性
+                    # 只设置src、style和referrerpolicy属性
                     if src_value:
                         img_tag['src'] = src_value
+                        img_tag['referrerpolicy'] = 'no-referrer'
                     if style_value:
                         img_tag['style'] = style_value
 

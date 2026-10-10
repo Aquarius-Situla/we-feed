@@ -107,6 +107,7 @@ class RSS:
         rss = ET.Element("rss", version="2.0")
         if full_context==True:
             rss.attrib["xmlns:content"] = "http://purl.org/rss/1.0/modules/content/"
+        rss.attrib["xmlns:media"] = "http://search.yahoo.com/mrss/"
         channel=ET.SubElement(rss, "channel")
         # 设置渠道信息
         ET.SubElement(channel, "title").text = title
@@ -117,8 +118,22 @@ class RSS:
         # Use timezone-aware now (CST/UTC+8) so %z shows +0800
         ET.SubElement(channel, "lastBuildDate").text = datetime.now(timezone(timedelta(hours=8))).strftime("%a, %d %b %Y %H:%M:%S %z")
     
+        def is_truthy(val, default=True):
+            if val is None:
+                return default
+            if isinstance(val, bool):
+                return val
+            return str(val).lower() in ("true", "1", "yes", "on")
+
+        def ensure_no_referrer(html: str) -> str:
+            if not html:
+                return ""
+            import re
+            pattern = re.compile(r'(<img\b(?![^>]*\breferrerpolicy=)[^>]*?)(\s*\/?>)', re.IGNORECASE)
+            return pattern.sub(r'\1 referrerpolicy="no-referrer"\2', html)
+
         # 设置image子项
-        if cfg.get("rss.add_cover",False)==True and image_url != "":
+        if is_truthy(cfg.get("rss.add_cover", True)) and image_url:
             image = ET.SubElement(channel, "image")
             ET.SubElement(image, "url").text = image_url
             ET.SubElement(image, "title").text = title
@@ -130,18 +145,26 @@ class RSS:
             ET.SubElement(item, "title").text = rss_item["title"]
             ET.SubElement(item, "description").text = rss_item["description"] 
             ET.SubElement(item, "guid").text = rss_item["link"]
-            # 添加图片封面
-            if cfg.get("rss.add_cover",False)==True:
+            item_image = str(rss_item.get("image") or "").strip()
+            # 添加图片封面（只在非空有效时添加，并遵循 Media RSS 规范）
+            if is_truthy(cfg.get("rss.add_cover", True)) and item_image:
                 enclosure = ET.SubElement(item, "enclosure")
-                enclosure.set("url", rss_item["image"])
+                enclosure.set("url", item_image)
                 enclosure.set("length", "0")
                 enclosure.set("type", "image/jpeg")
+                ET.SubElement(item, "media:thumbnail", url=item_image)
+                ET.SubElement(item, "media:content", url=item_image, medium="image")
             if full_context==True:
                 try:
-                    if cfg.get("rss.cdata",False)==True:
-                        content = f"<![CDATA[{str(rss_item['content'])}]]>"  # 使用CDATA包裹内容
+                    raw_content = str(rss_item.get('content') or "")
+                    if item_image and item_image not in raw_content:
+                        cover_tag = f'<p style="text-align: center;"><img src="{item_image}" referrerpolicy="no-referrer" style="max-width: 100%; border-radius: 8px;" alt="cover" /></p>'
+                        raw_content = f"{cover_tag}\n{raw_content}"
+                    raw_content = ensure_no_referrer(raw_content)
+                    if is_truthy(cfg.get("rss.cdata", False)):
+                        content = f"<![CDATA[{raw_content}]]>"  # 使用CDATA包裹内容
                     else:
-                        content = str(rss_item['content'])
+                        content = raw_content
                     ET.SubElement(item, "content:encoded").text = content
                 except Exception as e:
                     print(f"Error adding content:encoded element: {e}")
@@ -178,10 +201,25 @@ class RSS:
         from core.config import cfg
         full_context = bool(cfg.get("rss.full_context", False))
         
+        def is_truthy(val, default=True):
+            if val is None:
+                return default
+            if isinstance(val, bool):
+                return val
+            return str(val).lower() in ("true", "1", "yes", "on")
+
+        def ensure_no_referrer(html: str) -> str:
+            if not html:
+                return ""
+            import re
+            pattern = re.compile(r'(<img\b(?![^>]*\breferrerpolicy=)[^>]*?)(\s*\/?>)', re.IGNORECASE)
+            return pattern.sub(r'\1 referrerpolicy="no-referrer"\2', html)
+
         # 创建根元素(Atom标准)
         feed = ET.Element("feed", xmlns="http://www.w3.org/2005/Atom")
         if full_context==True:
             feed.attrib["xmlns:content"] = "http://purl.org/rss/1.0/modules/content/"
+        feed.attrib["xmlns:media"] = "http://search.yahoo.com/mrss/"
         ET.SubElement(feed, "title").text = title
         ET.SubElement(feed, "link",rel="alternate", href=link)
         ET.SubElement(feed, "link",rel="icon", href=image_url)
@@ -192,7 +230,7 @@ class RSS:
         ET.SubElement(feed, "id").text = str(link)
         ET.SubElement(feed, "author").text = "Mp-We-Rss"
         # 设置image子项
-        if cfg.get("rss.add_cover",False)==True and image_url != "":
+        if is_truthy(cfg.get("rss.add_cover", True)) and image_url:
             image = ET.SubElement(feed, "image")
             ET.SubElement(image, "url").text = str(image_url)
             ET.SubElement(image, "title").text = str(title)
@@ -205,20 +243,23 @@ class RSS:
             ET.SubElement(entry, "updated").text =self.datetime_to_rfc822(str(rss_item["updated"]))
             ET.SubElement(entry, "summary").text = str(rss_item["description"])
             ET.SubElement(entry, "author").text = str(rss_item["mp_name"])
-             # 添加图片封面
-            if cfg.get("rss.add_cover",False)==True:
-                enclosure = ET.SubElement(entry, "enclosure")
-                enclosure.set("url", str(rss_item["image"]))
-                enclosure.set("length", "0")
-                enclosure.set("type", "image/jpeg")
+            item_image = str(rss_item.get("image") or "").strip()
+            # 添加图片封面（Atom RFC 4287 标准附件链接与 Media RSS 规范）
+            if is_truthy(cfg.get("rss.add_cover", True)) and item_image:
+                ET.SubElement(entry, "link", rel="enclosure", type="image/jpeg", href=item_image)
+                ET.SubElement(entry, "media:thumbnail", url=item_image)
+                ET.SubElement(entry, "media:content", url=item_image, medium="image")
             
             if full_context:
                 type=self.get_content_type()
-                # content = ET.SubElement(entry, "content", type=f"{str(type)}") 
-                # content.text = format_content(rss_item["content"],type)
-                content=format_content(rss_item["content"],type)
+                raw_content = str(rss_item.get("content") or "")
+                if item_image and item_image not in raw_content:
+                    cover_tag = f'<p style="text-align: center;"><img src="{item_image}" referrerpolicy="no-referrer" style="max-width: 100%; border-radius: 8px;" alt="cover" /></p>'
+                    raw_content = f"{cover_tag}\n{raw_content}"
+                raw_content = ensure_no_referrer(raw_content)
+                content=format_content(raw_content, type)
                 try:
-                    if cfg.get("rss.cdata",False)==True:
+                    if is_truthy(cfg.get("rss.cdata", False)):
                         content = f"<![CDATA[{content}]]>"  # 使用CDATA包裹内容
                     else:
                         ET.SubElement(entry, "content:encoded").text = content

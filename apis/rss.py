@@ -257,23 +257,35 @@ async def get_mp_articles_source(
         articles =query.order_by(Article.publish_time.desc()).limit(limit).offset(offset).all()
         # 转换为RSS格式数据
         from datetime import datetime, timezone, timedelta
+        import re
         cst = timezone(timedelta(hours=8))
-        rss_list = [{
-            "id": str(article.id),
-            "title": clean_article_title(article.title or "") or (article.title or ""),
-            "link":  f"{rss_domain}/views/article/{article.id}" if cfg.get("rss.local",False) else (article.url or "").replace("~", "_"),
-            "description": clean_article_title(article.title or "") if (article.description or "") == (article.title or "") else (article.description or ""),
-            "content": article.content or "",
-            "image": article.pic_url or "",
-            "mp_name":_feed.mp_name or "",
-            "updated": datetime.fromtimestamp(article.publish_time, tz=cst),
-            "feed": {
-                    "id":_feed.id,
-                    "name":_feed.mp_name,
-                    "cover":_feed.mp_cover,
-                    "intro":_feed.mp_intro
-            }
-        } for _feed,article in articles]
+        rss_list = []
+        for _feed, article in articles:
+            # 题图/封面优先使用 article.pic_url，其次从正文中提取第一张图片，最后保底为公众号头像
+            img_url = (article.pic_url or "").strip()
+            if not img_url and article.content:
+                m = re.search(r'<img[^>]+src=["\'](https?://[^"\']+)["\']', article.content, re.IGNORECASE)
+                if m:
+                    img_url = m.group(1).strip()
+            if not img_url and _feed.mp_cover:
+                img_url = (_feed.mp_cover or "").strip()
+
+            rss_list.append({
+                "id": str(article.id),
+                "title": clean_article_title(article.title or "") or (article.title or ""),
+                "link":  f"{rss_domain}/views/article/{article.id}" if cfg.get("rss.local",False) else (article.url or "").replace("~", "_"),
+                "description": clean_article_title(article.title or "") if (article.description or "") == (article.title or "") else (article.description or ""),
+                "content": article.content or "",
+                "image": img_url,
+                "mp_name": _feed.mp_name or "",
+                "updated": datetime.fromtimestamp(article.publish_time, tz=cst),
+                "feed": {
+                    "id": _feed.id,
+                    "name": _feed.mp_name,
+                    "cover": _feed.mp_cover,
+                    "intro": _feed.mp_intro
+                }
+            })
         
 
         # 缓存文章内容
