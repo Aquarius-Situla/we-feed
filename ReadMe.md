@@ -1,5 +1,7 @@
 <div align="center">
 
+<img src="static/logo.svg" alt="WeFeed Logo" width="100" height="100">
+
 # WeFeed
 
 **An elegant, reliable, and privacy-first WeChat Official Account & WeRead RSS aggregator.**
