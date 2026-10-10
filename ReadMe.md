@@ -1,278 +1,124 @@
+<div align="center">
 
-> [!NOTE]
-> **Fork ??????? (Fork & License Notice)**  
-> **WeFeed** ???????? [rachelos/we-mp-rss](https://github.com/rachelos/we-mp-rss)?MIT License??????????????  
-> ????????? MIT ??????????????????WeFeed ?????? **GNU AGPL-3.0 or later** ?????
-> 
-> **WeFeed ????????**
-> 1. ??? **?????**???????????????????????????????/????????
-> 2. ? **??????**??? `ret=200013` ???????????????????????? Playwright ???????????
-> 3. ?? **???????**????????? Token ??? `~` ?????????????????????
-> 4. ?? **???????**???????????????????????????????????
-> 5. ?? **?????**??????? Cookie ???????????? Failover?
-> 6. ?? **??????**????? GitHub Actions ???????`amd64` / `arm64`?Docker ?? `ghcr.io/aquarius-situla/we-feed:latest`?
+<img src="static/logo.svg" alt="WeFeed Logo" width="120" height="120">
 
-<div align=center>
-<img src="static/logo.svg" alt="WeFeed Logo" width="20%">
-<h1>WeFeed - ?????????? RSS ????</h1>
+# WeFeed
 
-[![Python Version](https://img.shields.io/badge/python-3.13.1+-red.svg)]()
-[![License](https://img.shields.io/badge/license-AGPL--3.0--or--later-blue.svg)]()
+**An elegant, reliable, and privacy-first WeChat Official Account & WeRead RSS aggregator.**
 
-[中文](README.zh-CN.md)|[English](ReadMe.md)
+[![License: AGPL v3](https://img.shields.io/badge/License-AGPL%20v3%20or%20later-blue.svg)](LICENSE)
+[![Docker Image](https://img.shields.io/badge/Docker-ghcr.io-blue?logo=docker)](https://github.com/Aquarius-Situla/we-feed/pkgs/container/we-feed)
+[![Multi-Arch](https://img.shields.io/badge/Platform-linux%2Famd64%20%7C%20linux%2Farm64-success)](#)
+[![Python Version](https://img.shields.io/badge/Python-3.13+-brightgreen.svg)]()
 
-Quick Start
-```
-docker run -d  --name we-feed  -p 8001:8001 -v ./data:/app/data  ghcr.io/aquarius-situla/we-feed:latest
-```
-Visit http://<your-ip>:8001/ to get started
+[English](ReadMe.md) | [简体中文](README.zh-CN.md)
 
-# Quick Upgrade 
-
-```
-docker stop we-feed
-docker rm we-feed
-docker pull ghcr.io/aquarius-situla/we-feed:latest
-# If you added other parameters, please modify accordingly
-docker run -d  --name we-feed  -p 8001:8001 -v ./data:/app/data  ghcr.io/aquarius-situla/we-feed:latest
-```
-
-# Official Image
-```
-docker run -d  --name we-feed  -p 8001:8001 -v ./data:/app/data  rachelos/we-mp-rss:latest
-```
-# Proxy Mirror for Faster Access (Faster access in China)
-```
-docker run -d  --name we-feed  -p 8001:8001 -v ./data:/app/data  docker.1ms.run/rachelos/we-mp-rss:latest  
-```
-
-# Special Thanks (In no particular order)
-cyChaos, 子健MeLift, 晨阳, 童总, 胜宇, 军亮, 余光, 一路向北, 水煮土豆丝, 人可, 须臾, 澄明, 五梭,Jarvis,三三,哈基米,苹果 
-
-
- <br/>
- <img src="https://github.com/user-attachments/assets/cbe924f2-d8b0-48b0-814e-7c06ccb1911c" height="60" />
-    <img src="https://github.com/user-attachments/assets/6997a236-3df3-49d5-98a4-514f6d1a02c4" height="60" />
-    <br />
-    <br />
-    <a href="https://github.com/RSSNext/Folo/stargazers"><img src="https://img.shields.io/github/stars/RSSNext/Follow?color=ffcb47&labelColor=black&style=flat-square&logo=github&label=Stars" /></a>
-    <a href="https://github.com/RSSNext/Folo/graphs/contributors"><img src="https://img.shields.io/github/contributors/RSSNext/Folo?style=flat-square&logo=github&label=Contributors&labelColor=black" /></a>
-    <a href="https://status.follow.is/" target="_blank"><img src="https://status.follow.is/api/badge/18/uptime?color=%2344CC10&labelColor=black&style=flat-square"/></a>
-    <a href="https://github.com/RSSNext/Folo/releases"><img src="https://img.shields.io/github/downloads/RSSNext/Folo/total?color=369eff&labelColor=black&logo=github&style=flat-square&label=Downloads" /></a>
-    <a href="https://x.com/intent/follow?screen_name=folo_is"><img src="https://img.shields.io/badge/Follow-blue?color=1d9bf0&logo=x&labelColor=black&style=flat-square" /></a>
-    <a href="https://discord.gg/followapp" target="_blank"><img src="https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fdiscord.com%2Fapi%2Finvites%2Ffollowapp%3Fwith_counts%3Dtrue&query=approximate_member_count&color=5865F2&label=Discord&labelColor=black&logo=discord&logoColor=white&style=flat-square"/></a>
-    <br />
-A tool for subscribing to and managing WeChat Official Account content, providing RSS subscription functionality.
 </div>
-<p align="center">
-  <a href="https://github.com/DIYgod/sponsors">
-    <img src="https://raw.githubusercontent.com/DIYgod/sponsors/main/sponsors.wide.svg" />
-  </a>
-</p>
 
-## Features
+---
 
-- WeChat Official Account content scraping and parsing
-- RSS feed generation
-- User-friendly web management interface
-- Scheduled automatic content updates
-- Multiple database support (default SQLite, optional MySQL)
-- Multiple scraping methods support
-- Optional `weread_mp` collection mode for `MP_WXS_*` feeds ([configuration](docs/weread-mp.md))
-- Multiple RSS client support
-- Authorization expiration reminders
-- Custom notification channels
-- Custom RSS title, description, and cover
-- Custom RSS pagination size
-- Export to md/docx/pdf/json formats
-- API interface and WebHook support
-- HTML content filtering rules (global rules and MP-specific rules)
-- Multi-theme support (13 themes: Default Purple, Blue, Green, Orange, Rose, Teal, Pink, Indigo, Violet, Coffee, Navy, Dark Mode, Sepia)
-- Responsive pagination (PC: click navigation, Mobile: load more button)
-- **Cascade System**: Parent-child node architecture with intelligent task distribution for scaling collection capabilities
-- **Environment Exception Statistics**: Automatic tracking and statistics of environment exceptions when accessing WeChat articles
-- **Headers and Cookies Authentication**: Support custom headers and cookies in message tasks for authenticated webhook calls
-- **Configuration Cache**: Support Redis, Memcached, and memory caching for improved configuration read performance
+## 🌟 Why WeFeed?
 
+**WeFeed** is a modernized, self-hosted RSS generation and content archiving assistant for WeChat Official Accounts. It is engineered to solve widespread challenges found in existing WeChat scrapers—such as **frequent anti-scraping blocks, embedded third-party tracking scripts, broken shortlinks, and noisy long-text titles**—offering a truly out-of-the-box, resilient, and privacy-respecting RSS subscription feed.
 
-# ❤️ Sponsorship
-If you find We-MP-RSS helpful, feel free to buy me a beer!<br/>
-<img src="docs/赞赏码.jpg" width=180/>
-[Paypal](https://www.paypal.com/ncp/payment/PUA72WYLAV5KW)
+### Key Highlights
 
-## Screenshots
-- Login Interface  
-<img src="docs/登录.png" alt="Login" width="80%"/><br/>
-- Main Interface  
-<img src="docs/主界面.png" alt="Main Interface" width="80%"/><br/>
-- QR Code Authorization  
-<img src="docs/扫码授权.png" alt="QR Code Authorization" width="80%"/><br/>
-- Add Subscription  
-<img src="docs/添加订阅.png" alt="Add Subscription" width="80%"/><br/>
+- 🛡️ **100% Tracker-Free & Privacy-Focused**: Completely removed all hardcoded third-party tracking/analytics scripts (e.g. Baidu Tongji) present in upstream, ensuring zero metadata or domain leaks for self-hosted instances.
+- ⚡ **Multi-Tier Automated Failover**: Fixed premature exit loops on `ret=200013` rate limits, establishing a seamless automated fallback chain: `API Endpoints` ➔ `free_publish` ➔ `WeRead (weread_mp)` ➔ `Playwright`.
+- 👥 **Multi-Account Quota Failover**: Supports configuring multiple WeRead accounts. When one account exhausts its daily reading quota (`-2014` / `499` / `-2041`), WeFeed automatically rotates to standby accounts without interrupting subscriptions.
+- 🔗 **Zero Parameter Errors (URL Token Fix)**: Automatically restores tildes (`~`) in WeRead review IDs back to standard URL-safe Base64 underscores (`_`), eliminating WeChat "Parameter Error" pages and content extraction deadlocks.
+- 📝 **Smart Short Image-Text Title Sanitization**: Detects titleless short image-text dynamic posts and smartly extracts the first sentence as a clean title, preventing 500+ character body texts from polluting feed readers.
+- 🐳 **Official Multi-Arch Docker Images**: Built directly via GitHub Actions supporting native `linux/amd64` and `linux/arm64` (Raspberry Pi, ARM NAS, Apple Silicon servers), eliminating the need for complex host patch mounts.
+- 📡 **Universal Reader Compatibility**: Generates standard RSS 2.0, Atom, and JSON feeds fully tested with FreshRSS, Miniflux, Feedly, NetNewsWire, and Inoreader.
 
-- Client Application<br/>
-<img src="docs/folo.webp" alt="FOLO Client Application" width="80%"/><br/>
+---
 
+## 🚀 Quick Start
 
+### Method 1: Docker Compose (Recommended)
 
-## System Architecture
+Create `docker-compose.yml`:
 
-The project adopts a front-end and back-end separation architecture:
-- Backend: Python + FastAPI
-- Frontend: Vue 3 + Vite
-- Database: SQLite (default)/MySQL
-<img src="docs/架构原理.png" alt="Architecture Diagram" width="80%"/>
+```yaml
+version: "3.8"
 
-For more project principles, please refer to the [Project Documentation](https://deepwiki.com/rachelos/we-mp-rss/3.5-notification-system).
+services:
+  we-feed:
+    image: ghcr.io/aquarius-situla/we-feed:latest
+    container_name: we-feed
+    restart: always
+    ports:
+      - "8001:8001"
+    environment:
+      - TZ=Asia/Shanghai
+      - RSS_BASE_URL=http://localhost:8001  # External URL (e.g. https://feed.example.com)
+      - RSS_FULL_CONTEXT=True               # Include full HTML article content in feed
+      - GATHER.CONTENT=True                 # Download and clean full article body
+      - GATHER.MODEL=weread_mp              # Recommended collection model
+      - SPAN_INTERVAL=15                    # Periodic sync interval in minutes
+    volumes:
+      - ./data:/app/data
+```
 
-## HTML Content Filtering Rules
-
-WeRSS supports custom HTML content filtering rules to automatically clean unwanted elements during article content collection, such as ads, recommendation links, etc.
-
-### Features
-
-- **Global Rules**: Apply to all official accounts when no specific account is selected
-- **MP-Specific Rules**: Configure different filtering rules for specific official accounts
-- **Priority Control**: Set rule priority (higher number = executed first)
-- **Multiple Filtering Methods**:
-  - Remove elements by ID
-  - Remove elements by CSS Class
-  - Remove elements by CSS Selector
-  - Filter elements by attribute
-  - Remove content by regular expression
-  - Remove common HTML elements (script, style, comments, etc.)
-
-### Usage
-
-1. Login to the admin interface, go to "Filter Rules" page
-2. Click "Add Filter Rule"
-3. Configure the rule:
-   - **Select Official Account**: Optional, leave empty for global rules
-   - **Rule Name**: A descriptive name for the rule
-   - **Priority**: Higher number means higher priority (0-100)
-   - **Filter Configuration**:
-     - Remove ID elements: One ID per line, e.g., `ad-banner`
-     - Remove Class elements: One class per line, e.g., `ad-container`
-     - CSS Selectors: e.g., `div.ad-wrapper`, `.recommend-list > li`
-     - Attribute filtering: e.g., `data-type="ad"`
-     - Regular expressions: For precise content matching and removal
-
-### API Endpoints
+Start the service:
 
 ```bash
-# Get filter rules list
-GET /api/filter-rules
-
-# Create filter rule
-POST /api/filter-rules
-{
-  "mp_id": "[]",  // Empty array for global rules
-  "rule_name": "Global Ad Filter",
-  "remove_ids": ["ad-banner"],
-  "remove_classes": ["ad-container"],
-  "priority": 10
-}
-
-# Update filter rule
-PUT /api/filter-rules/{rule_id}
-
-# Delete filter rule
-DELETE /api/filter-rules/{rule_id}
+docker compose up -d
 ```
 
-## Installation Guide
+Open `http://<your-server-ip>:8001` in your browser to access the WeFeed web console.
 
-# Development
-## Environment Requirements
-- Python>=3.13.1
-- Node>=20.18.3
-### Backend Service
+---
 
-1. Clone the project
+### Method 2: Docker CLI
+
 ```bash
-git clone https://github.com/rachelos/we-mp-rss.git
-cd we-mp-rss
+docker run -d \
+  --name we-feed \
+  --restart always \
+  -p 8001:8001 \
+  -e TZ=Asia/Shanghai \
+  -e RSS_BASE_URL=http://localhost:8001 \
+  -e GATHER.MODEL=weread_mp \
+  -v $(pwd)/data:/app/data \
+  ghcr.io/aquarius-situla/we-feed:latest
 ```
 
-2. Install Python dependencies
-```bash
-pip install -r requirements.txt
-```
+---
 
-3. Configure database
-Copy and modify the configuration file:
-```bash
-cp config.example.yaml config.yaml
-copy config.example.yaml config.yaml
-```
-3. Start the service
-```bash
-python main.py -job True -init True
-```
+## ⚙️ Environment Variables
 
-## Frontend Development
-1. Install frontend dependencies
-```bash
-cd we-mp-rss/web_ui
-yarn install
-```
+| Variable | Default | Description |
+|---|---|---|
+| `RSS_BASE_URL` | `http://localhost:8001` | Public base URL used for prefixing generated RSS feed links |
+| `RSS_FULL_CONTEXT` | `True` | Whether to include full article content and images in feeds |
+| `GATHER.MODEL` | `weread_mp` | Primary collection engine: `weread_mp` (recommended), `web`, or `app` |
+| `GATHER.CONTENT` | `True` | Whether to fetch full article body during synchronization |
+| `SPAN_INTERVAL` | `15` | Polling interval for automated scheduled synchronization (minutes) |
+| `MAX_PAGE` | `1` | Maximum pagination depth per account run |
+| `PROXY_URL` | *(empty)* | Optional outbound HTTP/SOCKS proxy when datacenter IPs are blocked |
 
-2. Start frontend service
-```bash
-yarn dev
-```
-3. Access frontend page
-```
-http://localhost:3000
-```
+---
 
-# Environment Variable Configuration
+## 📖 WeRead Multi-Account Setup
 
-The following are the environment variable configurations supported in `config.yaml`:
+1. Open the WeFeed admin dashboard in your browser.
+2. Navigate to **WeRead Management**.
+3. Click **Scan QR Code** to authorize your primary WeChat account.
+4. Optionally click **Scan QR Code (Add Account)** to link additional backup accounts.
+5. When the primary account exhausts its daily quota, WeFeed automatically rotates requests to backup accounts, guaranteeing uninterrupted feeds.
 
-| Environment Variable | Default Value | Description |
-|----------|--------|------|
-| `APP_NAME` | `we-mp-rss` | Application name |
-| `SERVER_NAME` | `we-mp-rss` | Server name |
-| `WEB_NAME` | `WeRSS微信公众号订阅助手` | Frontend display name |
-| `SEND_CODE` | `False` | Whether to send authorization QR code in expired notification (text-only notification by default) |
-| `CODE_TITLE` | `WeRSS授权二维码` | QR code notification title |
-| `ENABLE_JOB` | `True` | Whether to enable scheduled tasks |
-| `AUTO_RELOAD` | `False` | Auto-restart service on code changes |
-| `THREADS` | `2` | Maximum number of threads |
-| `DB` | `sqlite:///data/db.db` | Database connection string |
-| `DINGDING_WEBHOOK` | Empty | DingTalk notification webhook URL |
-| `WECHAT_WEBHOOK` | Empty | WeChat notification webhook URL |
-| `FEISHU_WEBHOOK` | Empty | Feishu notification webhook URL |
-| `CUSTOM_WEBHOOK` | Empty | Custom notification webhook URL |
-| `SECRET_KEY` | `we-mp-rss` | Secret key |
-| `USER_AGENT` | `Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36/WeRss` | User agent |
-| `SPAN_INTERVAL` | `10` | Scheduled task execution interval (seconds) |
-| `WEBHOOK.CONTENT_FORMAT` | `html` | Article content sending format |
-| `PORT` | `8001` | API service port |
-| `DEBUG` | `False` | Debug mode |
-| `MAX_PAGE` | `5` | Maximum scraping pages |
-| `RSS_BASE_URL` | Empty | RSS domain address |
-| `RSS_LOCAL` | `False` | Whether to use local RSS links |
-| `RSS_TITLE` | Empty | RSS title |
-| `RSS_DESCRIPTION` | Empty | RSS description |
-| `RSS_COVER` | Empty | RSS cover |
-| `RSS_FULL_CONTEXT` | `True` | Whether to display full text |
-| `RSS_ADD_COVER` | `True` | Whether to add cover images |
-| `RSS_CDATA` | `False` | Whether to enable CDATA |
-| `RSS_PAGE_SIZE` | `30` | RSS pagination size |
-| `TOKEN_EXPIRE_MINUTES` | `4320` | Login session validity duration (minutes) |
-| `CACHE.DIR` | `./data/cache` | Cache directory |
-| `ARTICLE.TRUE_DELETE` | `False` | Whether to truly delete articles |
-| `GATHER.CONTENT` | `True` | Whether to collect content |
-| `GATHER.MODEL` | `app` | Collection mode |
-| `GATHER.CONTENT_AUTO_CHECK` | `False` | Whether to automatically check uncollected article content |
-| `GATHER.CONTENT_AUTO_INTERVAL` | `59` | Time interval for automatically checking uncollected article content (minutes) |
-| `GATHER.CONTENT_MODE` | `web` | Content correction mode |
-| `SAFE_HIDE_CONFIG` | `db,secret,token,notice.wechat,notice.feishu,notice.dingding` | Configuration information to hide |
-| `SAFE_LIC_KEY` | `RACHELOS` | Authorization encryption key |
-| `LOG_FILE` | Empty | Log file path |
-| `LOG_LEVEL` | `INFO` | Log level |
-| `EXPORT_PDF` | `False` | Whether to enable PDF export functionality |
+---
 
+## 📜 License & Acknowledgements
 
+This project is licensed under the **[GNU Affero General Public License v3.0 or later (AGPL-3.0-or-later)](LICENSE)**.
+
+### Upstream Attribution
+WeFeed is a community-maintained fork and enhancement of **[rachelos/we-mp-rss](https://github.com/rachelos/we-mp-rss)**. In accordance with the original **MIT License** terms, we gratefully acknowledge and preserve the original copyright notice below:
+
+> **MIT License**  
+> Copyright (c) 2025 RACHEL  
+> Mail: rachelos@qq.com  
+> 
+> *The original code from we-mp-rss is licensed under the MIT License. See [LICENSE](LICENSE) for the full text.*
