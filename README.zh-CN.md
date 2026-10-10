@@ -1,7 +1,5 @@
 <div align="center">
 
-<img src="static/logo.svg" alt="WeFeed Logo" width="120" height="120">
-
 # WeFeed
 
 **优雅、稳定、纯净的微信公众号与微信读书 RSS 聚合订阅助手**
