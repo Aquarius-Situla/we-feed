@@ -97,6 +97,8 @@ docker run -d \
 | `SPAN_INTERVAL` | `15` | 定时全量同步轮询间隔（分钟） |
 | `MAX_PAGE` | `1` | 微信读书单次抓取最大翻页数 |
 | `PROXY_URL` | *(空)* | HTTP/SOCKS 出口代理（如微信封锁数据中心 IP 时使用） |
+| `SSO_TRUST_PROXY` | `False` | 是否信任前置反代 SSO 网关（如 Nginx Authenticator），开启后免登录直通主页 |
+| `WEREAD_AUTO_KEEPALIVE` | `True` | 容器原生无头 Chromium 自动保活微信读书 Cookie，告别外部脚本 |
 
 ---
 

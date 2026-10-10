@@ -83,6 +83,14 @@ if __name__ == '__main__':
     else:
         print_warning("文章统计定时刷新任务未启用")
     
+    # 启动微信读书 Cookie 原生保活服务（默认开启，可通过 WEREAD_AUTO_KEEPALIVE=false 禁用）
+    if str(os.environ.get("WEREAD_AUTO_KEEPALIVE", "true")).lower() in ("true", "1") and cfg.get("gather.weread_auto_keepalive", True):
+        try:
+            from core.weread_keepalive import start_weread_keepalive_service
+            start_weread_keepalive_service()
+        except Exception as e:
+            print_warning(f"微信读书原生保活服务启动失败: {e}")
+
     print("启动服务器")
     AutoReload=cfg.get("server.auto_reload",False)
     thread=cfg.get("server.threads",1)

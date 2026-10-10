@@ -97,6 +97,8 @@ docker run -d \
 | `SPAN_INTERVAL` | `15` | Polling interval for automated scheduled synchronization (minutes) |
 | `MAX_PAGE` | `1` | Maximum pagination depth per account run |
 | `PROXY_URL` | *(empty)* | Optional outbound HTTP/SOCKS proxy when datacenter IPs are blocked |
+| `SSO_TRUST_PROXY` | `False` | Trust upstream reverse proxy SSO authentication (e.g. Nginx Authenticator / Authelia) |
+| `WEREAD_AUTO_KEEPALIVE` | `True` | Native in-container WeRead Cookie auto-keepalive via headless Chromium |
 
 ---
 

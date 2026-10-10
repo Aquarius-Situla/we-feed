@@ -26,7 +26,19 @@ class GitHubUpdater:
             repo_path: 仓库路径，默认为当前目录
         """
         self.repo_path = repo_path or os.getcwd()
-        self.git_executable = self._find_git_executable()
+        self.disabled = (
+            os.environ.get('DISABLE_UPDATE', '').lower() in ('true', '1') or
+            os.path.exists('/.dockerenv') or
+            not os.path.exists(os.path.join(self.repo_path, '.git'))
+        )
+        if not self.disabled:
+            try:
+                self.git_executable = self._find_git_executable()
+            except Exception:
+                self.disabled = True
+                self.git_executable = None
+        else:
+            self.git_executable = None
         
     def _find_git_executable(self) -> str:
         """查找 Git 可执行文件"""
@@ -95,6 +107,10 @@ class GitHubUpdater:
             'error': None
         }
         
+        if self.disabled:
+            status_info['error'] = 'Docker容器环境或安全策略已禁用在线更新'
+            return status_info
+        
         # 检查是否为 Git 仓库
         success, _, _ = self._run_git_command(['rev-parse', '--git-dir'])
         if not success:
@@ -154,6 +170,10 @@ class GitHubUpdater:
             'updated_files': [],
             'error': None
         }
+        
+        if self.disabled:
+            result['message'] = 'Docker容器环境或安全策略已禁用在线更新，请拉取最新镜像升级'
+            return result
         
         try:
             # 检查仓库状态
@@ -263,6 +283,10 @@ class GitHubUpdater:
             'message': '',
             'error': None
         }
+        
+        if self.disabled:
+            result['error'] = 'Docker容器环境或安全策略已禁用回滚'
+            return result
         
         try:
             # 创建回滚前的备份

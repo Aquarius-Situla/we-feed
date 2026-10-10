@@ -9,7 +9,7 @@ if sys.platform == 'win32':
 from fastapi import FastAPI, Request, APIRouter, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, HTMLResponse
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from fastapi.openapi.models import OAuthFlows as OAuthFlowsModel
 from fastapi.openapi.models import OAuthFlowPassword
@@ -86,9 +86,9 @@ app.add_middleware(AKMiddleware)
 async def add_custom_header(request: Request, call_next):
     response = await call_next(request)
     response.headers["X-Version"] = VERSION
-    response.headers["X-Powered-By"] = "Rachel"
-    response.headers["GITHUB"] = "https://github.com/rachelos/we-mp-rss"
-    response.headers["Server"] = cfg.get("app_name", "WeRSS")
+    response.headers["X-Powered-By"] = "WeFeed"
+    response.headers["GITHUB"] = "https://github.com/Aquarius-Situla/we-feed"
+    response.headers["Server"] = cfg.get("app_name", "WeFeed")
     return response
 # 创建API路由分组
 api_router = APIRouter(prefix=f"{API_BASE}")
@@ -137,6 +137,21 @@ async def serve_vue_app(request: Request, path: str):
     # 返回Vue入口文件
     index_path = os.path.join("static", "index.html")
     if os.path.exists(index_path):
+        from core.auth import is_sso_trust_proxy_enabled
+        if is_sso_trust_proxy_enabled():
+            with open(index_path, "r", encoding="utf-8") as f:
+                html = f.read()
+            sso_script = """  <script>
+    localStorage.setItem('token', 'sso');
+    localStorage.setItem('token_expire', String(Date.now() + 315360000000));
+    if (location.pathname === '/login' || location.hash.indexOf('/login') !== -1) {
+      location.replace('/');
+    }
+  </script>
+"""
+            if "</head>" in html:
+                html = html.replace("</head>", sso_script + "</head>")
+            return HTMLResponse(content=html)
         return FileResponse(index_path)
     
     return {"error": "Not Found"}, 404

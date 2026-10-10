@@ -294,6 +294,13 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
     to_encode.update({"exp": expire})
     return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
 
+def is_sso_trust_proxy_enabled() -> bool:
+    """是否启用了反向代理/前置网关 SSO 信任免密登录"""
+    return (
+        os.environ.get("SSO_TRUST_PROXY", "").lower() in ("true", "1") or
+        cfg.get("auth.sso_trust_proxy", False)
+    )
+
 async def get_current_user(token: str = Depends(oauth2_scheme)):
     """获取当前用户"""
     credentials_exception = HTTPException(
@@ -301,15 +308,19 @@ async def get_current_user(token: str = Depends(oauth2_scheme)):
         detail="Could not validate credentials",
         headers={"WWW-Authenticate": "Bearer"},
     )
-    try:
-        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-        username: str = payload.get("sub")
-        if username is None:
-            raise credentials_exception
-    except jwt.PyJWTError:
-        raise credentials_exception
-    
-    user = get_user(username)
+    user = None
+    if token and token != "sso":
+        try:
+            payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+            username: str = payload.get("sub")
+            if username:
+                user = get_user(username)
+        except Exception:
+            pass
+
+    if user is None and is_sso_trust_proxy_enabled():
+        user = get_user("admin")
+
     if user is None:
         raise credentials_exception
         
@@ -517,22 +528,25 @@ async def get_current_user_or_ak(request: Request, token: str = Depends(oauth2_s
         except:
             pass
     
-    # 回退到 JWT Token 认证
+    # 回退到 JWT Token 认证 (支持外层 SSO 免密映射)
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="Could not validate credentials",
         headers={"WWW-Authenticate": "Bearer"},
     )
-    try:
-        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-        username: str = payload.get("sub")
-        if username is None:
-            raise credentials_exception
-    except jwt.PyJWTError:
-        raise credentials_exception
-    
-    user = get_user(username)
-    
+    user = None
+    if token and token != "sso":
+        try:
+            payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+            username: str = payload.get("sub")
+            if username:
+                user = get_user(username)
+        except Exception:
+            pass
+
+    if user is None and is_sso_trust_proxy_enabled():
+        user = get_user("admin")
+
     if user is None:
         raise credentials_exception
         
@@ -541,7 +555,7 @@ async def get_current_user_or_ak(request: Request, token: str = Depends(oauth2_s
         "role": user.role,
         "permissions": user.permissions,
         "original_user": user,
-        "auth_type": "jwt"  # 标记为 JWT 认证
+        "auth_type": "sso" if token == "sso" else "jwt"  # 标记认证方式
     }
 
 

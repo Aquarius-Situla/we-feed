@@ -1,9 +1,9 @@
-app_name: ${APP_NAME:-we-mp-rss}
+app_name: ${APP_NAME:-WeFeed}
 server:
    #服务名称
    name: ${SERVER_NAME:-we-mp-rss}
    #前端显示名称
-   web_name: ${WEB_NAME:-WeRSS微信公众号订阅助手}
+   web_name: ${WEB_NAME:-WeFeed 微信公众号订阅助手}
    #过期是否发送授权二维码通知 默认False，设为True时通知中附带二维码
    send_code: ${SEND_CODE:-False}
    #二维通知标题
@@ -22,6 +22,17 @@ server:
    article_stats_refresh_enabled: ${ARTICLE_STATS_REFRESH_ENABLED:-False}
    # 文章统计刷新间隔 默认300秒
    article_stats_refresh_interval: ${ARTICLE_STATS_REFRESH_INTERVAL:-3600}
+
+# 身份认证与反向代理 SSO 网关支持
+auth:
+   # 是否信任前置反向代理 SSO 免密鉴权（如 Nginx Authenticator / Authelia / Cloudflare Access）
+   # 开启后，无凭据或携带 SSO 凭据时自动映射为管理员，前端免跳转登录
+   sso_trust_proxy: ${SSO_TRUST_PROXY:-False}
+
+# 采集与保活配置
+gather:
+   # 微信读书 Cookie 原生自动保活服务（在容器内通过无头 Chromium 定时保活，无需外部 crontab）
+   weread_auto_keepalive: ${WEREAD_AUTO_KEEPALIVE:-True}
 
 #数据库连接 例如db:  mysql+pymysql://<username>:<password>@<host>/we-rss?charset=utf8mb4
 #PostgreSQL 连接示例: postgresql://<username>:<password>@<host>/<database>
