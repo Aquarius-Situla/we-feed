@@ -1,5 +1,6 @@
 """Collect WeChat Official Account articles through WeRead Web."""
 
+import re
 import time
 from urllib.parse import quote
 
@@ -12,6 +13,22 @@ from core.wx.model.weread import MpsWeread
 
 
 WEREAD_WEB_BASE = "https://weread.qq.com"
+
+def clean_article_title(raw_title: str, max_length: int = 120) -> str:
+    """?????????????????????????????"""
+    if not raw_title:
+        return ""
+    lines = [line.strip() for line in raw_title.splitlines() if line.strip()]
+    if not lines:
+        return ""
+    first_line = lines[0]
+    if len(first_line) > max_length:
+        sentences = re.split(r'([???!?])', first_line)
+        if len(sentences) >= 2 and len(sentences[0] + sentences[1]) <= max_length:
+            first_line = sentences[0] + sentences[1]
+        else:
+            first_line = first_line[:max_length].rstrip() + "..."
+    return first_line.strip() or ""
 
 
 class WereadMPAPIError(Exception):
@@ -92,7 +109,7 @@ def parse_mp_articles(payload: dict):
             articles.append({
                 "aid": review_id,
                 "id": review_id,
-                "title": mp_info.get("title", ""),
+                "title": clean_article_title(mp_info.get("title", "")),
                 "link": build_mp_url(mp_info.get("originalId", "")),
                 "cover": mp_info.get("pic_url", ""),
                 "digest": mp_info.get("content") or review.get("content", ""),
@@ -265,7 +282,7 @@ class MpsWereadMP(MpsWeread):
         """兜底方案：通过 /api/mp/cover 只采集最新一篇文章。"""
         cover = self._get_mp_cover(book_id)
         review_id = (cover.get("reviewId") or "").strip()
-        title = (cover.get("title") or "").strip()
+        title = clean_article_title((cover.get("title") or "").strip())
         self.response_valid = True
 
         if not review_id:

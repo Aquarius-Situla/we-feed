@@ -259,9 +259,9 @@ async def get_mp_articles_source(
         cst = timezone(timedelta(hours=8))
         rss_list = [{
             "id": str(article.id),
-            "title": article.title or "",
-            "link":  f"{rss_domain}/views/article/{article.id}" if cfg.get("rss.local",False) else article.url,
-            "description": article.description if article.description != "" else article.title or "",
+            "title": clean_article_title(article.title or "") or "???",
+            "link":  f"{rss_domain}/views/article/{article.id}" if cfg.get("rss.local",False) else (article.url or "").replace("~", "_"),
+            "description": clean_article_title(article.title or "") if (article.description or "") == (article.title or "") else (article.description or ""),
             "content": article.content or "",
             "image": article.pic_url or "",
             "mp_name":_feed.mp_name or "",
