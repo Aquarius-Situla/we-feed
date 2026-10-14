@@ -101,23 +101,33 @@ def run_keepalive(lic_path: str = None) -> bool:
                 except Exception as e:
                     log(f"注入 Cookie 警告: {e}")
 
-            page = context.new_page()
+            target_url = weread_data.get("cookie_refresh_url") or TARGET_URL
+
+            def on_request(request):
+                if "web/mp/articles" in request.url:
+                    req_cookie = request.headers.get("cookie", "")
+                    for item in req_cookie.split(";"):
+                        if "=" in item:
+                            k, _, v = item.strip().partition("=")
+                            captured_cookies[k.strip()] = v.strip()
 
             def on_response(response):
                 if "weread.qq.com" in response.url:
                     for header_name, header_val in response.headers.items():
                         if header_name.lower() == "set-cookie":
-                            for part in header_val.split(","):
-                                c_item = part.strip().split(";")[0]
-                                if "=" in c_item:
-                                    k, _, v = c_item.partition("=")
-                                    captured_cookies[k.strip()] = v.strip()
+                            for part in header_val.split("\n"):
+                                for subpart in part.split(";"):
+                                    if "=" in subpart:
+                                        k, _, v = subpart.strip().partition("=")
+                                        if k.strip().startswith("wr_"):
+                                            captured_cookies[k.strip()] = v.strip()
 
+            page.on("request", on_request)
             page.on("response", on_response)
 
-            log("正在加载微信读书书架以触发生命周期保活...")
+            log(f"正在加载微信读书页面以触发生命周期保活: {target_url}...")
             try:
-                page.goto(TARGET_URL, wait_until="domcontentloaded", timeout=45000)
+                page.goto(target_url, wait_until="domcontentloaded", timeout=45000)
                 time.sleep(6)
                 log(f"页面加载完成: '{page.title()}'")
             except Exception as e:
@@ -189,7 +199,7 @@ def run_keepalive(lic_path: str = None) -> bool:
         return False
 
 
-def _keepalive_loop(interval_hours: int = 8):
+def _keepalive_loop(interval_hours: int = 1):
     """后台常驻定时保活循环"""
     # 启动 30 秒后先执行一次初始保活
     time.sleep(30)
@@ -201,7 +211,7 @@ def _keepalive_loop(interval_hours: int = 8):
         time.sleep(interval_hours * 3600)
 
 
-def start_weread_keepalive_service(interval_hours: int = 8):
+def start_weread_keepalive_service(interval_hours: int = 1):
     """启动容器内置后台保活守护线程"""
     t = threading.Thread(target=_keepalive_loop, args=(interval_hours,), daemon=True, name="WeReadKeepAliveThread")
     t.start()
