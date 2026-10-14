@@ -157,8 +157,10 @@ class WXArticleFetcher:
                 article_type = await self._detect_article_type(page)
                 info["article_type"] = article_type
 
-                # 获取内容
+                # 获取内容：优先取正文容器 #js_content；若为图片消息则取 #js_image_content；兜底才取 #js_article
                 content = await page.locator('#js_content').inner_html()
+                if not content:
+                    content = await page.locator('#js_image_content').inner_html()
                 if not content:
                     content = await page.locator('#js_article').inner_html()
 
@@ -171,9 +173,11 @@ class WXArticleFetcher:
                 # 重新获取内容（滚动后可能有更多图片加载）
                 content = await page.locator('#js_content').inner_html()
                 if not content:
+                    content = await page.locator('#js_image_content').inner_html()
+                if not content:
                     content = await page.locator('#js_article').inner_html()
 
-                content=Web.clean_article_content(str(content))
+                content = Web.clean_article_content(str(content))
                 # 更新基本信息
                 info["title"] = title or ""
                 info["author"] = author or ""
@@ -686,9 +690,15 @@ class Web:
             except Exception as e:
                 print_error(f"修复图片失败: {str(e)}")
             return content
-    def clean_article_content(html_content: str,mp_id:str=""):
+    @staticmethod
+    def clean_article_content(html_content: str, mp_id: str = ""):
         from tools.htmltools import htmltools
-        html_content=Web.fix_images(html_content)
+        from core.cleaner import clean_wechat_junk
+
+        html_content = Web.fix_images(html_content)
+        # 无论是否开启自定义过滤，微信专属交互垃圾元素（赞赏弹窗、付费弹窗、数字键盘、底部工具栏等）必须无条件彻底剥离
+        html_content = clean_wechat_junk(html_content)
+
         # 应用过滤规则
         try:
             from apis.filter_rule import apply_filter_rules
@@ -698,7 +708,7 @@ class Web:
 
         except Exception as e:
             print_warning(f"应用过滤规则失败: {e}")
-        if not cfg.get("gather.clean_html",False):
+        if not cfg.get("gather.clean_html", False):
             return html_content
         
         return htmltools.clean_html(str(html_content).strip(),

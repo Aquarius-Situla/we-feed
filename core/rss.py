@@ -156,7 +156,8 @@ class RSS:
                 ET.SubElement(item, "media:content", url=item_image, medium="image")
             if full_context==True:
                 try:
-                    raw_content = str(rss_item.get('content') or "")
+                    from core.cleaner import clean_wechat_junk
+                    raw_content = clean_wechat_junk(str(rss_item.get('content') or ""))
                     if item_image and item_image not in raw_content:
                         cover_tag = f'<p style="text-align: center;"><img src="{item_image}" referrerpolicy="no-referrer" style="max-width: 100%; border-radius: 8px;" alt="cover" /></p>'
                         raw_content = f"{cover_tag}\n{raw_content}"
