@@ -261,14 +261,8 @@ async def get_mp_articles_source(
         cst = timezone(timedelta(hours=8))
         rss_list = []
         for _feed, article in articles:
-            # 题图/封面优先使用 article.pic_url，其次从正文中提取第一张图片，最后保底为公众号头像
+            # 题图：仅使用文章真实的 pic_url，若无则保持为空，不降级为公众号Logo或随机图片
             img_url = (article.pic_url or "").strip()
-            if not img_url and article.content:
-                m = re.search(r'<img[^>]+src=["\'](https?://[^"\']+)["\']', article.content, re.IGNORECASE)
-                if m:
-                    img_url = m.group(1).strip()
-            if not img_url and _feed.mp_cover:
-                img_url = (_feed.mp_cover or "").strip()
 
             rss_list.append({
                 "id": str(article.id),
