@@ -11,6 +11,8 @@ import sys
 import time
 import json
 import logging
+import random
+import datetime
 import threading
 import yaml
 import requests
@@ -52,6 +54,12 @@ def run_keepalive(lic_path: str = None) -> bool:
     weread_data = lic.get("weread_data", {})
     cookie_str = weread_data.get("cookie", "")
     current_vid = weread_data.get("vid", "")
+
+    # 兼容多账号列表结构 accounts: [{"cookie": ..., "vid": ...}, ...]
+    accounts = weread_data.get("accounts")
+    if not cookie_str and isinstance(accounts, list) and accounts:
+        cookie_str = accounts[0].get("cookie", "")
+        current_vid = accounts[0].get("vid", "")
 
     if not cookie_str:
         log("跳过保活: weread_data 中未配置 cookie")
@@ -102,6 +110,7 @@ def run_keepalive(lic_path: str = None) -> bool:
                     log(f"注入 Cookie 警告: {e}")
 
             target_url = weread_data.get("cookie_refresh_url") or TARGET_URL
+            page = context.pages[0] if context.pages else context.new_page()
 
             def on_request(request):
                 if "web/mp/articles" in request.url:
@@ -128,7 +137,8 @@ def run_keepalive(lic_path: str = None) -> bool:
             log(f"正在加载微信读书页面以触发生命周期保活: {target_url}...")
             try:
                 page.goto(target_url, wait_until="domcontentloaded", timeout=45000)
-                time.sleep(6)
+                # 随机停留 5 ~ 9 秒模拟人类正常停留浏览
+                time.sleep(random.uniform(5.0, 9.0))
                 log(f"页面加载完成: '{page.title()}'")
             except Exception as e:
                 log(f"页面跳转警告: {e}")
@@ -182,11 +192,24 @@ def run_keepalive(lic_path: str = None) -> bool:
     except Exception as e:
         log(f"API 校验请求异常: {e}")
 
-    # 写回 wx.lic
+    # 写回 wx.lic（兼容顶级 cookie/vid 与 accounts 列表）
     weread_data["cookie"] = new_cookie_str
     if wr_vid:
         weread_data["vid"] = str(wr_vid)
     weread_data["last_keepalive_ts"] = time.time()
+
+    if isinstance(weread_data.get("accounts"), list) and weread_data["accounts"]:
+        matched = False
+        for acc in weread_data["accounts"]:
+            if str(acc.get("vid", "")) == str(wr_vid):
+                acc["cookie"] = new_cookie_str
+                matched = True
+                break
+        if not matched:
+            weread_data["accounts"][0]["cookie"] = new_cookie_str
+            if wr_vid:
+                weread_data["accounts"][0]["vid"] = str(wr_vid)
+
     lic["weread_data"] = weread_data
 
     try:
@@ -199,20 +222,76 @@ def run_keepalive(lic_path: str = None) -> bool:
         return False
 
 
-def _keepalive_loop(interval_hours: int = 1):
-    """后台常驻定时保活循环"""
-    # 启动 30 秒后先执行一次初始保活
-    time.sleep(30)
+def calculate_next_sleep_seconds(base_interval_hours: float = 3.0) -> float:
+    """
+    计算下一次保活休眠时长，模拟正常人类作息并添加随机盐值（jitter）：
+
+    1. 深夜睡眠休眠 (01:00 ~ 07:00 本地时间)：
+       正常人深夜处于睡眠状态，不会每小时频繁打开微信读书。
+       若当前进入深夜时间，或计算出的下次执行时间落在 01:00 ~ 07:00：
+       系统将休眠直至早晨唤醒（07:15 ~ 08:00，包含随机盐值），避免深夜机械式刷新触发风控。
+
+    2. 白天正常活跃时间 (07:00 ~ 01:00)：
+       基础周期拉长至 2.5 ~ 3.5 小时（默认基准 3 小时，远非固定的 1 小时）。
+       并叠加 ±25 ~ 40 分钟的大幅度随机盐值 (jitter)，
+       真实模拟人类不规律打开阅读器的生活习惯。
+    """
+    now = datetime.datetime.now()
+    hour = now.hour
+    minute = now.minute
+
+    # 如果当前时间已在深夜 01:00 ~ 06:59
+    if 1 <= hour < 7:
+        minutes_to_7am = (6 - hour) * 60 + (60 - minute)
+        wake_jitter_minutes = random.randint(15, 45)
+        sleep_seconds = float((minutes_to_7am + wake_jitter_minutes) * 60)
+        wake_time = now + datetime.timedelta(seconds=sleep_seconds)
+        log(f"当前为深夜作息时间 ({now.strftime('%H:%M')})，模拟人类作息睡眠中... 将休眠至早晨 {wake_time.strftime('%H:%M:%S')} (约 {sleep_seconds/3600:.2f} 小时)")
+        return sleep_seconds
+
+    # 白天：基准时长浮动 ±0.5 小时
+    fluctuated_hours = base_interval_hours + random.uniform(-0.5, 0.5)
+    # 额外附加 ±1500 秒 (±25 分钟) 随机盐
+    jitter_seconds = random.uniform(-1500, 1500)
+    sleep_seconds = max(1800.0, fluctuated_hours * 3600.0 + jitter_seconds)
+
+    # 预测下次唤醒时间
+    wake_time = now + datetime.timedelta(seconds=sleep_seconds)
+    # 若下次唤醒时间落在深夜 01:00 ~ 06:59，则自动顺延至早晨唤醒
+    if 1 <= wake_time.hour < 7:
+        wake_day = wake_time.date()
+        target_morning = datetime.datetime(
+            wake_day.year, wake_day.month, wake_day.day,
+            7, random.randint(15, 45), random.randint(0, 59)
+        )
+        if target_morning > now:
+            sleep_seconds = float((target_morning - now).total_seconds())
+            wake_time = now + datetime.timedelta(seconds=sleep_seconds)
+
+    log(f"模拟人类作息调度：下次保活休眠 {sleep_seconds/3600:.2f} 小时（加盐后预计于 {wake_time.strftime('%Y-%m-%d %H:%M:%S')} 唤醒）")
+    return sleep_seconds
+
+
+def _keepalive_loop(base_interval_hours: float = 3.0):
+    """后台常驻保活守护循环（智能加盐与作息模拟）"""
+    # 启动后随机等待 45 ~ 90 秒，避免容器刚启动时 CPU 竞争
+    init_delay = random.uniform(45.0, 90.0)
+    time.sleep(init_delay)
+
     while True:
         try:
             run_keepalive()
         except Exception as e:
-            log(f"定时保活异常: {e}")
-        time.sleep(interval_hours * 3600)
+            log(f"保活执行异常: {e}")
+
+        # 计算下一次休眠时间（包含作息判断与加盐）
+        sleep_sec = calculate_next_sleep_seconds(base_interval_hours)
+        time.sleep(sleep_sec)
 
 
-def start_weread_keepalive_service(interval_hours: int = 1):
+def start_weread_keepalive_service(interval_hours: float = 3.0):
     """启动容器内置后台保活守护线程"""
     t = threading.Thread(target=_keepalive_loop, args=(interval_hours,), daemon=True, name="WeReadKeepAliveThread")
     t.start()
-    log(f"微信读书原生 Cookie 保活守护服务已启动（周期: {interval_hours} 小时）")
+    log(f"微信读书原生 Cookie 保活守护服务已启动（基准周期: {interval_hours} 小时，模拟人类作息与随机加盐）")
+
