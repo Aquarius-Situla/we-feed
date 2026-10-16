@@ -118,8 +118,9 @@ class MpsAppMsg(WxGather):
                                     if CallBack is not None:
                                         super().FillBack(CallBack=CallBack,data=item,Ext_Data={"mp_title":Mps_title,"mp_id":Mps_id})
                     print(f"第{i+1}页爬取成功\n")
-                # 翻页
+                # 翻页与重置单页重试计数
                 i += 1
+                retry_count = 0
             except requests.exceptions.Timeout:
                 print("Request timed out")
                 break
@@ -159,3 +160,4 @@ class MpsAppMsg(WxGather):
         except Exception as e:
             print_error(f"降级到 free_publish 失败: {e}")
             super().Error(f"所有采集方式均失败: {e}")
+            super().Over(CallBack=Over_CallBack)

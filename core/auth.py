@@ -294,6 +294,8 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
     to_encode.update({"exp": expire})
     return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
 
+import ipaddress
+
 def is_sso_trust_proxy_enabled() -> bool:
     """是否启用了反向代理/前置网关 SSO 信任免密登录"""
     return (
@@ -301,7 +303,69 @@ def is_sso_trust_proxy_enabled() -> bool:
         cfg.get("auth.sso_trust_proxy", False)
     )
 
-async def get_current_user(token: str = Depends(oauth2_scheme)):
+def _is_ip_trusted(client_ip: str, trusted_list: list[str]) -> bool:
+    """检查客户端 IP 是否在受信任的代理列表中（支持单个 IP 或 CIDR 网段）"""
+    if not client_ip:
+        return False
+    try:
+        c_ip = ipaddress.ip_address(client_ip)
+        for item in trusted_list:
+            item = item.strip()
+            if not item:
+                continue
+            if "/" in item:
+                if c_ip in ipaddress.ip_network(item, strict=False):
+                    return True
+            else:
+                if c_ip == ipaddress.ip_address(item):
+                    return True
+    except Exception:
+        pass
+    return False
+
+def verify_sso_request(request: Optional[Request], token: Optional[str]) -> bool:
+    """
+    验证当前请求是否符合受信任的 SSO 代理免密登录条件
+    
+    安全准则：
+    1. 必须开启 SSO_TRUST_PROXY 配置；
+    2. 必须明确携带 'sso' 标识（禁止任意无 Token 或非法 Token 请求静默提权）；
+    3. 若配置了 SSO_TRUST_SECRET / auth.sso_secret，必须强校验请求头中的密钥；
+    4. 若配置了 SSO_TRUSTED_PROXIES / auth.sso_trusted_proxies，必须校验请求来源 IP。
+    """
+    if not is_sso_trust_proxy_enabled():
+        return False
+        
+    # 严格要求 token 必须显式为 'sso'，禁止未传 token 或携带失效 token 的任意请求被无条件提升为 admin
+    if token != "sso":
+        return False
+
+    # 1. 共享密钥校验（若配置了密钥，则强校验请求头）
+    sso_secret = os.environ.get("SSO_TRUST_SECRET") or cfg.get("auth.sso_secret")
+    if sso_secret:
+        if request is None:
+            return False
+        req_secret = request.headers.get("X-SSO-Secret") or request.headers.get("X-SSO-Key")
+        if not req_secret or not secrets.compare_digest(str(req_secret), str(sso_secret)):
+            return False
+
+    # 2. 受信任代理 IP 校验
+    raw_trusted_proxies = os.environ.get("SSO_TRUSTED_PROXIES") or cfg.get("auth.sso_trusted_proxies")
+    if raw_trusted_proxies:
+        if request is None or not request.client or not request.client.host:
+            return False
+        if isinstance(raw_trusted_proxies, str):
+            trusted_list = [p.strip() for p in raw_trusted_proxies.split(",") if p.strip()]
+        elif isinstance(raw_trusted_proxies, (list, tuple)):
+            trusted_list = list(raw_trusted_proxies)
+        else:
+            trusted_list = []
+        if not _is_ip_trusted(request.client.host, trusted_list):
+            return False
+
+    return True
+
+async def get_current_user(request: Request = None, token: str = Depends(oauth2_scheme)):
     """获取当前用户"""
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
@@ -318,7 +382,7 @@ async def get_current_user(token: str = Depends(oauth2_scheme)):
         except Exception:
             pass
 
-    if user is None and is_sso_trust_proxy_enabled():
+    if user is None and verify_sso_request(request, token):
         user = get_user("admin")
 
     if user is None:
@@ -544,7 +608,7 @@ async def get_current_user_or_ak(request: Request, token: str = Depends(oauth2_s
         except Exception:
             pass
 
-    if user is None and is_sso_trust_proxy_enabled():
+    if user is None and verify_sso_request(request, token):
         user = get_user("admin")
 
     if user is None:

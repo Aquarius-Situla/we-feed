@@ -139,7 +139,8 @@ class RSS:
             ET.SubElement(image, "title").text = title
             ET.SubElement(image, "link").text = link
 
-        for rss_item in rss_list:
+        cdata_map = {}
+        for idx, rss_item in enumerate(rss_list):
             item = ET.SubElement(channel, "item")
             ET.SubElement(item, "id").text = rss_item["id"]
             ET.SubElement(item, "title").text = rss_item["title"]
@@ -163,7 +164,10 @@ class RSS:
                         raw_content = f"{cover_tag}\n{raw_content}"
                     raw_content = ensure_no_referrer(raw_content)
                     if is_truthy(cfg.get("rss.cdata", False)):
-                        content = f"<![CDATA[{raw_content}]]>"  # 使用CDATA包裹内容
+                        placeholder = f"__WEFEED_CDATA_TOKEN_{idx}__"
+                        safe_cdata = raw_content.replace("]]>", "]]]]><![CDATA[>")
+                        cdata_map[placeholder] = f"<![CDATA[{safe_cdata}]]>"
+                        content = placeholder
                     else:
                         content = raw_content
                     ET.SubElement(item, "content:encoded").text = content
@@ -178,6 +182,9 @@ class RSS:
         # 生成XML字符串(添加声明和美化输出)
         tree_str = '<?xml version="1.0" encoding="utf-8"?>\r\n' + \
                 ET.tostring(rss, encoding="utf-8", method="xml", short_empty_elements=False).decode("utf-8")
+        for token, cdata_block in cdata_map.items():
+            tree_str = tree_str.replace(token, cdata_block)
+        tree_str = tree_str.replace("&lt;![CDATA[", "<![CDATA[").replace("]]&gt;", "]]>")
         
         if self.rss_file is not None:
             with open(self.rss_file, "w", encoding="utf-8") as f:
@@ -236,7 +243,8 @@ class RSS:
             ET.SubElement(image, "url").text = str(image_url)
             ET.SubElement(image, "title").text = str(title)
             ET.SubElement(image, "link").text = str(link)
-        for rss_item in rss_list:
+        cdata_map = {}
+        for idx, rss_item in enumerate(rss_list):
             entry = ET.SubElement(feed, "entry")
             ET.SubElement(entry, "id").text = rss_item["id"]
             ET.SubElement(entry, "title").text = str(rss_item["title"])
@@ -253,23 +261,29 @@ class RSS:
             
             if full_context:
                 type=self.get_content_type()
-                raw_content = str(rss_item.get("content") or "")
-                if item_image and item_image not in raw_content:
-                    cover_tag = f'<p style="text-align: center;"><img src="{item_image}" referrerpolicy="no-referrer" style="max-width: 100%; border-radius: 8px;" alt="cover" /></p>'
-                    raw_content = f"{cover_tag}\n{raw_content}"
-                raw_content = ensure_no_referrer(raw_content)
-                content=format_content(raw_content, type)
                 try:
+                    from core.cleaner import clean_wechat_junk
+                    raw_content = clean_wechat_junk(str(rss_item.get("content") or ""))
+                    if item_image and item_image not in raw_content:
+                        cover_tag = f'<p style="text-align: center;"><img src="{item_image}" referrerpolicy="no-referrer" style="max-width: 100%; border-radius: 8px;" alt="cover" /></p>'
+                        raw_content = f"{cover_tag}\n{raw_content}"
+                    raw_content = ensure_no_referrer(raw_content)
+                    content=format_content(raw_content, type)
                     if is_truthy(cfg.get("rss.cdata", False)):
-                        content = f"<![CDATA[{content}]]>"  # 使用CDATA包裹内容
-                    else:
-                        ET.SubElement(entry, "content:encoded").text = content
+                        placeholder = f"__WEFEED_ATOM_CDATA_TOKEN_{idx}__"
+                        safe_cdata = content.replace("]]>", "]]]]><![CDATA[>")
+                        cdata_map[placeholder] = f"<![CDATA[{safe_cdata}]]>"
+                        content = placeholder
+                    ET.SubElement(entry, "content:encoded").text = content
                 except Exception as e:
                     print(f"Error adding content:encoded element: {e}")
                 pass
         # 生成XML字符串
         tree_str = '<?xml version="1.0" encoding="utf-8"?>\r\n' + \
                   ET.tostring(feed, encoding="utf-8", method="xml").decode("utf-8")
+        for token, cdata_block in cdata_map.items():
+            tree_str = tree_str.replace(token, cdata_block)
+        tree_str = tree_str.replace("&lt;![CDATA[", "<![CDATA[").replace("]]&gt;", "]]>")
         
         if self.rss_file is not None:
             with open(self.rss_file, "w", encoding="utf-8") as f:

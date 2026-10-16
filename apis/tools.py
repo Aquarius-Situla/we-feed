@@ -329,6 +329,18 @@ async def download_export_file(
     下载导出的文件
     """
     try:
+        # 输入校验：阻止路径穿越字符、控制字符及非法文件名，同时完整兼容中文名称与空格
+        if not filename or len(filename) > 255:
+            return error_response(400, "非法的文件名")
+        if os.path.basename(filename) != filename or any(c in filename for c in ('/', '\\', '\0', '..')) or filename in {".", ".."}:
+            return error_response(400, "非法的文件名")
+
+        if mp_id is not None:
+            if not mp_id or len(mp_id) > 128:
+                return error_response(400, "非法的公众号ID")
+            if os.path.basename(mp_id) != mp_id or any(c in mp_id for c in ('/', '\\', '\0', '..')) or mp_id in {".", ".."}:
+                return error_response(400, "非法的公众号ID")
+
         # 定义基础目录
         base_dir = os.path.abspath("./data/docs")
 

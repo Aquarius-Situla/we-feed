@@ -112,6 +112,9 @@ async def get_rss_feeds(
                 message="获取RSS订阅列表失败"
             )
         )
+    finally:
+        if session is not None:
+            session.close()
 
 @router.get("/content/{content_id}", summary="获取缓存的文章内容")
 async def get_rss_feed(content_id: str):
@@ -301,13 +304,18 @@ async def get_mp_articles_source(
             content=rss_xml,
             media_type=rss.get_type()
         )
+    except HTTPException:
+        raise
     except Exception as e:
         print_error(f"获取RSS错误:{e}")
         # raise
         return Response(
-             content=rss_xml,
+             content=rss_xml if 'rss_xml' in locals() and rss_xml else "",
              media_type=rss.get_type()
         )
+    finally:
+        if session is not None:
+            session.close()
     
 
 

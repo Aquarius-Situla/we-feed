@@ -26,8 +26,12 @@ server:
 # 身份认证与反向代理 SSO 网关支持
 auth:
    # 是否信任前置反向代理 SSO 免密鉴权（如 Nginx Authenticator / Authelia / Cloudflare Access）
-   # 开启后，无凭据或携带 SSO 凭据时自动映射为管理员，前端免跳转登录
+   # 开启后，仅对携带显式 SSO 凭证且满足安全校验的请求映射为管理员，前端免跳转登录
    sso_trust_proxy: ${SSO_TRUST_PROXY:-False}
+   # 可选安全加固：反向代理前置共享密钥（需反代携带 X-SSO-Secret 请求头）
+   sso_secret: ${SSO_TRUST_SECRET:-}
+   # 可选安全加固：允许 SSO 免密请求的受信任代理 IP 或 CIDR 网段（如 127.0.0.1,172.16.0.0/12）
+   sso_trusted_proxies: ${SSO_TRUSTED_PROXIES:-}
 
 # 采集与保活配置
 gather:

@@ -16,6 +16,7 @@ import datetime
 import threading
 import yaml
 import requests
+import tempfile
 
 logger = logging.getLogger("weread_keepalive")
 
@@ -91,65 +92,66 @@ def run_keepalive(lic_path: str = None) -> bool:
                 user_agent=USER_AGENT,
                 viewport={"width": 1920, "height": 1080}
             )
-
-            # 注入现有 Cookie
-            if cookie_str:
-                cookies_to_add = []
-                for item in cookie_str.split(";"):
-                    if "=" in item:
-                        k, _, v = item.strip().partition("=")
-                        cookies_to_add.append({
-                            "name": k.strip(),
-                            "value": v.strip(),
-                            "domain": ".weread.qq.com",
-                            "path": "/"
-                        })
-                try:
-                    context.add_cookies(cookies_to_add)
-                except Exception as e:
-                    log(f"注入 Cookie 警告: {e}")
-
-            target_url = weread_data.get("cookie_refresh_url") or TARGET_URL
-            page = context.pages[0] if context.pages else context.new_page()
-
-            def on_request(request):
-                if "web/mp/articles" in request.url:
-                    req_cookie = request.headers.get("cookie", "")
-                    for item in req_cookie.split(";"):
+            try:
+                # 注入现有 Cookie
+                if cookie_str:
+                    cookies_to_add = []
+                    for item in cookie_str.split(";"):
                         if "=" in item:
                             k, _, v = item.strip().partition("=")
-                            captured_cookies[k.strip()] = v.strip()
+                            cookies_to_add.append({
+                                "name": k.strip(),
+                                "value": v.strip(),
+                                "domain": ".weread.qq.com",
+                                "path": "/"
+                            })
+                    try:
+                        context.add_cookies(cookies_to_add)
+                    except Exception as e:
+                        log(f"注入 Cookie 警告: {e}")
 
-            def on_response(response):
-                if "weread.qq.com" in response.url:
-                    for header_name, header_val in response.headers.items():
-                        if header_name.lower() == "set-cookie":
-                            for part in header_val.split("\n"):
-                                for subpart in part.split(";"):
-                                    if "=" in subpart:
-                                        k, _, v = subpart.strip().partition("=")
-                                        if k.strip().startswith("wr_"):
-                                            captured_cookies[k.strip()] = v.strip()
+                target_url = weread_data.get("cookie_refresh_url") or TARGET_URL
+                page = context.pages[0] if context.pages else context.new_page()
 
-            page.on("request", on_request)
-            page.on("response", on_response)
+                def on_request(request):
+                    if "web/mp/articles" in request.url:
+                        req_cookie = request.headers.get("cookie", "")
+                        for item in req_cookie.split(";"):
+                            if "=" in item:
+                                k, _, v = item.strip().partition("=")
+                                captured_cookies[k.strip()] = v.strip()
 
-            log(f"正在加载微信读书页面以触发生命周期保活: {target_url}...")
-            try:
-                page.goto(target_url, wait_until="domcontentloaded", timeout=45000)
-                # 随机停留 5 ~ 9 秒模拟人类正常停留浏览
-                time.sleep(random.uniform(5.0, 9.0))
-                log(f"页面加载完成: '{page.title()}'")
-            except Exception as e:
-                log(f"页面跳转警告: {e}")
+                def on_response(response):
+                    if "weread.qq.com" in response.url:
+                        for header_name, header_val in response.headers.items():
+                            if header_name.lower() == "set-cookie":
+                                for part in header_val.split("\n"):
+                                    for subpart in part.split(";"):
+                                        if "=" in subpart:
+                                            k, _, v = subpart.strip().partition("=")
+                                            if k.strip().startswith("wr_"):
+                                                captured_cookies[k.strip()] = v.strip()
 
-            ctx_cookies = context.cookies("https://weread.qq.com")
-            cookie_dict = {}
-            for c in ctx_cookies:
-                cookie_dict[c["name"]] = c["value"]
+                page.on("request", on_request)
+                page.on("response", on_response)
 
-            cookie_dict.update(captured_cookies)
-            context.close()
+                log(f"正在加载微信读书页面以触发生命周期保活: {target_url}...")
+                try:
+                    page.goto(target_url, wait_until="domcontentloaded", timeout=45000)
+                    # 随机停留 5 ~ 9 秒模拟人类正常停留浏览
+                    time.sleep(random.uniform(5.0, 9.0))
+                    log(f"页面加载完成: '{page.title()}'")
+                except Exception as e:
+                    log(f"页面跳转警告: {e}")
+
+                ctx_cookies = context.cookies("https://weread.qq.com")
+                cookie_dict = {}
+                for c in ctx_cookies:
+                    cookie_dict[c["name"]] = c["value"]
+
+                cookie_dict.update(captured_cookies)
+            finally:
+                context.close()
 
     except Exception as e:
         log(f"执行 Playwright 浏览器操作异常: {e}")
@@ -213,11 +215,20 @@ def run_keepalive(lic_path: str = None) -> bool:
     lic["weread_data"] = weread_data
 
     try:
-        with open(lic_path, "w", encoding="utf-8") as f:
+        dir_name = os.path.dirname(os.path.abspath(lic_path))
+        os.makedirs(dir_name, exist_ok=True)
+        fd, temp_file = tempfile.mkstemp(dir=dir_name, prefix=".wx_lic_", suffix=".tmp")
+        with os.fdopen(fd, "w", encoding="utf-8") as f:
             yaml.safe_dump(lic, f, allow_unicode=True, sort_keys=False)
-        log(f"最新 Cookie 已持久化保存至 {lic_path}")
+        os.replace(temp_file, lic_path)
+        log(f"最新 Cookie 已原子持久化保存至 {lic_path}")
         return True
     except Exception as e:
+        if 'temp_file' in locals() and os.path.exists(temp_file):
+            try:
+                os.remove(temp_file)
+            except Exception:
+                pass
         log(f"写回 {lic_path} 失败: {e}")
         return False
 
