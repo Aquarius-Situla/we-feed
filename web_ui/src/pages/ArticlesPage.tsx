@@ -23,7 +23,7 @@ import {
   IconTrash,
   IconRefresh,
   IconExternalLink,
-  IconBookOpen,
+  IconBook2,
 } from '@tabler/icons-react';
 import { notifications } from '@mantine/notifications';
 import { useSearchParams } from 'react-router-dom';
@@ -278,7 +278,7 @@ export function ArticlesPage() {
                 <Button
                   size="xs"
                   variant="subtle"
-                  leftSection={<IconBookOpen size={14} />}
+                  leftSection={<IconBook2 size={14} />}
                   onClick={() => setActiveArticleId(art.id)}
                 >
                   阅读
