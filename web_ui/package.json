@@ -1,27 +1,30 @@
 {
-  "name": "web-ui",
+  "name": "wefeed-web",
   "version": "1.0.0",
   "private": true,
+  "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vite build  --mode production",
+    "build": "vite build",
     "preview": "vite preview"
   },
   "dependencies": {
-    "@arco-design/web-vue": "^2.57.0",
-    "ant-design-vue": "^4.2.6",
-    "axios": "^1.12.0",
-    "codemirror": "^6.0.2",
-    "i18n-jsautotranslate": "^3.17.0",
-    "monaco-editor": "^0.54.0",
-    "vue": "^3.2.0",
-    "vue-codemirror": "^6.1.1",
-    "vue-router": "^4.0.0"
+    "@mantine/core": "^8.2.1",
+    "@mantine/hooks": "^8.2.1",
+    "@mantine/notifications": "^8.2.1",
+    "@tabler/icons-react": "^3.34.0",
+    "axios": "^1.11.0",
+    "clsx": "^2.1.1",
+    "dayjs": "^1.11.13",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0",
+    "react-router-dom": "^7.7.0"
   },
   "devDependencies": {
-    "@vitejs/plugin-vue": "^6.0.8",
-    "fs-extra": "^11.2.0",
-    "typescript": "^4.5.0",
-    "vite": "^8.0.8"
+    "@types/react": "^19.1.8",
+    "@types/react-dom": "^19.1.6",
+    "@vitejs/plugin-react": "^4.6.0",
+    "typescript": "^5.8.0",
+    "vite": "^7.0.4"
   }
 }
