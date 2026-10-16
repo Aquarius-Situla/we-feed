@@ -15,8 +15,8 @@ export default defineConfig(({ command, mode }) => {
     },
     base: "/",
     build: {
-      outDir: "dist",
-      emptyOutDir: true,
+      outDir: "../static",
+      emptyOutDir: false,
       assetsDir: "assets",
     },
     server: {
