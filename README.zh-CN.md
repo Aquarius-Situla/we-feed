@@ -66,7 +66,15 @@ services:
 docker compose up -d
 ```
 
-访问 `http://<服务器IP>:8001` 即可进入 WeFeed Web 管理界面。
+### 🔑 默认登录凭据
+
+- **管理面板访问**：`http://<服务器IP>:8001`
+- **默认管理员账号**：`admin`
+- **默认初始密码**：`admin@123`
+
+> [!TIP]
+> - 本项目定位为**自托管私有聚合工具**，出于安全防护与微信配额防滥用考虑，系统默认不开放公网注册。
+> - 您可以在部署时通过环境变量 `USERNAME` 与 `PASSWORD` 自定义初始账号与密码；登录后亦可在 Web 端「设置」中随时修改密码。
 
 ---
 
@@ -78,6 +86,8 @@ docker run -d \
   --restart always \
   -p 8001:8001 \
   -e TZ=Asia/Shanghai \
+  -e USERNAME=admin \
+  -e PASSWORD=admin@123 \
   -e RSS_BASE_URL=http://localhost:8001 \
   -e GATHER.MODEL=weread_mp \
   -v $(pwd)/data:/app/data \
@@ -90,6 +100,8 @@ docker run -d \
 
 | 变量名 | 默认值 | 说明 |
 |---|---|---|
+| `USERNAME` | `admin` | 超级管理员初始用户名 |
+| `PASSWORD` | `admin@123` | 超级管理员初始密码 |
 | `RSS_BASE_URL` | `http://localhost:8001` | 服务外部访问根域名（决定生成订阅链接的前缀） |
 | `RSS_FULL_CONTEXT` | `True` | 是否在 RSS / Atom 源中包含完整正文与配图 |
 | `GATHER.MODEL` | `weread_mp` | 核心采集通道：`weread_mp`（微信读书通道，推荐）、`web` 或 `app` |
@@ -97,7 +109,7 @@ docker run -d \
 | `SPAN_INTERVAL` | `15` | 定时全量同步轮询间隔（分钟） |
 | `MAX_PAGE` | `1` | 微信读书单次抓取最大翻页数 |
 | `PROXY_URL` | *(空)* | HTTP/SOCKS 出口代理（如微信封锁数据中心 IP 时使用） |
-| `SSO_TRUST_PROXY` | `False` | 是否信任前置反代 SSO 网关（如 Nginx Authenticator），开启后免登录直通主页 |
+| `SSO_TRUST_PROXY` | `False` | 是否信任前置反代 SSO 网关（如 Nginx Authenticator / Authelia），开启后免登录直通主页 |
 | `WEREAD_AUTO_KEEPALIVE` | `True` | 容器原生无头 Chromium 自动保活微信读书 Cookie，告别外部脚本 |
 
 ---

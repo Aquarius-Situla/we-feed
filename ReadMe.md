@@ -66,18 +66,27 @@ Start the service:
 docker compose up -d
 ```
 
-Open `http://<your-server-ip>:8001` in your browser to access the WeFeed web console.
+### 🔑 Default Credentials
+
+- **Web Console**: `http://<your-server-ip>:8001`
+- **Default Username**: `admin`
+- **Default Password**: `admin@123`
+
+> [!TIP]
+> - WeFeed is designed as a **self-hosted personal feed aggregator**. To protect privacy and prevent abuse of WeChat scraping quotas, public sign-ups are disabled by default.
+> - You can customize the initial credentials via the `USERNAME` and `PASSWORD` environment variables, or update your password anytime under the **Settings** tab.
 
 ---
 
 ### Method 2: Docker CLI
-
 ```bash
 docker run -d \
   --name we-feed \
   --restart always \
   -p 8001:8001 \
   -e TZ=Asia/Shanghai \
+  -e USERNAME=admin \
+  -e PASSWORD=admin@123 \
   -e RSS_BASE_URL=http://localhost:8001 \
   -e GATHER.MODEL=weread_mp \
   -v $(pwd)/data:/app/data \
@@ -90,6 +99,8 @@ docker run -d \
 
 | Variable | Default | Description |
 |---|---|---|
+| `USERNAME` | `admin` | Initial administrator username |
+| `PASSWORD` | `admin@123` | Initial administrator password |
 | `RSS_BASE_URL` | `http://localhost:8001` | Public base URL used for prefixing generated RSS feed links |
 | `RSS_FULL_CONTEXT` | `True` | Whether to include full article content and images in feeds |
 | `GATHER.MODEL` | `weread_mp` | Primary collection engine: `weread_mp` (recommended), `web`, or `app` |
