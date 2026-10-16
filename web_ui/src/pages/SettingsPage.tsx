@@ -291,13 +291,13 @@ export function SettingsPage() {
               <Stack align="center" py="xl">
                 <Loader size="md" />
               </Stack>
-            ) : tags.length === 0 ? (
+            ) : !Array.isArray(tags) || tags.length === 0 ? (
               <Text c="dimmed" py="md">
                 暂无分类标签。
               </Text>
             ) : (
               <Group gap="sm">
-                {tags.map((t) => (
+                {(Array.isArray(tags) ? tags : []).map((t) => (
                   <Badge
                     key={t.id}
                     size="lg"
@@ -336,7 +336,7 @@ export function SettingsPage() {
                     应用版本
                   </Text>
                   <Text fw={700} size="xl" mt="xs">
-                    {sysInfo?.version || '1.5.7'}
+                    {sysInfo?.core_version || sysInfo?.version || '1.5.7'}
                   </Text>
                   <Badge size="xs" variant="light" color="blue" mt="xs">
                     WeFeed Community Fork
@@ -347,23 +347,23 @@ export function SettingsPage() {
                   <Text size="xs" c="dimmed">
                     Python 运行时
                   </Text>
-                  <Text fw={700} size="lg" mt="xs" ff="monospace">
-                    {sysInfo?.python || 'Python 3.13'}
+                  <Text fw={700} size="sm" mt="xs" ff="monospace" lineClamp={2}>
+                    {sysInfo?.python_version ? String(sysInfo.python_version).split(' ')[0] : 'Python 3.13'}
                   </Text>
                   <Text size="xs" c="dimmed" mt="xs">
-                    运行在 {sysInfo?.os || 'Linux Docker'}
+                    运行在 {typeof sysInfo?.os === 'object' && sysInfo?.os?.name ? `${sysInfo.os.name} (${sysInfo.os.release || 'Docker'})` : String(sysInfo?.os || 'Linux Docker')}
                   </Text>
                 </Card>
 
                 <Card shadow="xs" padding="md" radius="md" withBorder>
                   <Text size="xs" c="dimmed">
-                    数据库收录规模
+                    收录与队列监控
                   </Text>
                   <Text fw={700} size="xl" mt="xs">
-                    {sysInfo?.database?.articles_count ?? '-'} 篇文章
+                    {sysInfo?.article?.all_count ?? 0} 篇文章
                   </Text>
                   <Text size="xs" c="dimmed" mt="xs">
-                    共收录 {sysInfo?.database?.feeds_count ?? '-'} 个订阅源
+                    队列状态: {sysInfo?.queue?.is_running ? '🟢 运行中' : '⚪ 空闲'} (等待任务: {sysInfo?.queue?.pending_tasks ?? 0})
                   </Text>
                 </Card>
               </SimpleGrid>

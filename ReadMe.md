@@ -74,7 +74,7 @@ docker compose up -d
 
 > [!TIP]
 > - WeFeed is designed as a **self-hosted personal feed aggregator**. To protect privacy and prevent abuse of WeChat scraping quotas, public sign-ups are disabled by default.
-> - You can customize the initial credentials via the `USERNAME` and `PASSWORD` environment variables, or update your password anytime under the **Settings** tab.
+> - You can configure or change administrator credentials anytime via the `USERNAME` and `PASSWORD` environment variables in your `docker-compose.yml`.
 
 ---
 

@@ -82,7 +82,7 @@ export function LoginPage() {
                 💡 <b>首次部署默认凭据</b>：用户名 <Text span c="blue" fw={600}>admin</Text> / 密码 <Text span c="blue" fw={600}>admin@123</Text>
               </Text>
               <Text size="xs" c="dimmed" ta="center" mt={4} style={{ fontSize: '11px' }}>
-                （私有自建服务，不开放公网注册；登录后可在设置中修改密码）
+                （自托管私有聚合工具，如需修改密码请在 docker-compose.yml 的环境变量 PASSWORD 中指定）
               </Text>
             </Paper>
           </Stack>
