@@ -239,13 +239,29 @@ async def get_mps(
             query = query.filter(Feed.status == status)
         total = query.count()
         mps = query.order_by(Feed.created_at.desc()).limit(limit).offset(offset).all()
+
+        # 查询公众号对应的有效文章数
+        mp_ids = [mp.id for mp in mps if mp.id]
+        article_counts = {}
+        if mp_ids:
+            from sqlalchemy import func
+            from core.models.article import ArticleBase
+            counts = (
+                session.query(ArticleBase.mp_id, func.count(ArticleBase.id))
+                .filter(ArticleBase.mp_id.in_(mp_ids), ArticleBase.status != DATA_STATUS.DELETED)
+                .group_by(ArticleBase.mp_id)
+                .all()
+            )
+            article_counts = {item[0]: item[1] for item in counts}
+
         mps_list = [{
                 "id": mp.id,
                 "mp_name": mp.mp_name,
                 "mp_cover": mp.mp_cover,
                 "mp_intro": mp.mp_intro,
                 "status": mp.status,
-                "created_at": mp.created_at.isoformat()
+                "article_count": article_counts.get(mp.id, 0),
+                "created_at": mp.created_at.isoformat() if mp.created_at else ""
             } for mp in mps]
         return success_response({
             "list": mps_list,

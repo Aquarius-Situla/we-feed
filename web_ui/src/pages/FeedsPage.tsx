@@ -69,7 +69,7 @@ export function FeedsPage() {
       const statusParam =
         statusFilter === 'active' ? 1 : statusFilter === 'disabled' ? 0 : undefined;
       const data = await getFeeds({
-        page: page - 1,
+        page,
         pageSize,
         kw: searchKw || undefined,
         status: statusParam,

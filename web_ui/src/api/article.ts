@@ -29,8 +29,8 @@ export async function getArticles(params: {
   has_content?: number;
   is_read?: number;
 }): Promise<ArticleListResponse> {
-  const page = params.page || 1;
-  const limit = params.pageSize || 20;
+  const page = Math.max(1, Number(params.page) || 1);
+  const limit = Math.max(1, Number(params.pageSize) || 12);
   const offset = (page - 1) * limit;
   const res: any = await client.get('/articles', {
     params: {
@@ -39,6 +39,7 @@ export async function getArticles(params: {
       search: params.kw || undefined,
       mp_id: params.mp_id || undefined,
       has_content: params.has_content !== undefined ? (params.has_content === 1 ? true : false) : undefined,
+      is_read: params.is_read !== undefined ? (params.is_read === 1 ? true : false) : undefined,
     },
   });
   return {

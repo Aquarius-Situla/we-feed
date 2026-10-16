@@ -417,6 +417,7 @@ async def get_articles(
     mp_id: str = Query(None),
     only_favorite: bool = Query(False),
     has_content: bool = Query(None, description="是否有正文: true=有, false=无, 不传=全部"),
+    is_read: bool = Query(None, description="是否已读: true=已读, false=未读, 不传=全部"),
     current_user: dict = Depends(get_current_user_or_ak)
 ):
     session = DB.get_session()
@@ -451,6 +452,8 @@ async def get_articles(
             query = query.filter(Article.mp_id == mp_id)
         if only_favorite:
             query = query.filter(Article.is_favorite == 1)
+        if is_read is not None:
+            query = query.filter(Article.is_read == (1 if is_read else 0))
         # 支持 has_content 参数：true=有正文，false=无正文，None=不筛选
         if has_content is not None:
             if has_content:
@@ -483,6 +486,7 @@ async def get_articles(
             article_dict = article.__dict__.copy()
             article_dict["mp_name"] = mp_names.get(article.mp_id, "未知公众号")
             article_dict["is_favorite"] = int(getattr(article, "is_favorite", 0) or 0)
+            article_dict["is_read"] = int(getattr(article, "is_read", 0) or 0)
             article_dict["has_content"] = int(getattr(article, "has_content", 0) or 0)
             article_list.append(article_dict)
         

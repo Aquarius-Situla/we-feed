@@ -60,7 +60,7 @@ export function ArticlesPage() {
   const [activeArticleId, setActiveArticleId] = useState<string | null>(null);
 
   useEffect(() => {
-    getFeeds({ page: 0, pageSize: 100 })
+    getFeeds({ page: 1, pageSize: 100 })
       .then((res) => setFeeds(res.list))
       .catch(() => {});
   }, []);
@@ -71,7 +71,7 @@ export function ArticlesPage() {
       const isReadParam =
         readFilter === 'read' ? 1 : readFilter === 'unread' ? 0 : undefined;
       const data = await getArticles({
-        page: page - 1,
+        page,
         pageSize,
         mp_id: selectedMpId || undefined,
         kw: searchKw || undefined,
@@ -89,6 +89,16 @@ export function ArticlesPage() {
   useEffect(() => {
     fetchArticles();
   }, [page, selectedMpId, readFilter]);
+
+  const handleSelectMp = (val: string | null) => {
+    setSelectedMpId(val || '');
+    setPage(1);
+  };
+
+  const handleSelectReadFilter = (val: string) => {
+    setReadFilter(val);
+    setPage(1);
+  };
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
