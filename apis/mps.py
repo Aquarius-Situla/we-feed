@@ -199,7 +199,6 @@ async def search_mp(
     offset: int = 0,
     current_user: dict = Depends(get_current_user_or_ak)
 ):
-    session = DB.get_session()
     try:
         result = search_Biz(kw,limit=limit,offset=offset)
         data={
@@ -281,6 +280,8 @@ async def get_mps(
                 message="获取公众号列表失败"
             )
         )
+    finally:
+        session.close()
 
 
 @router.post("/featured/article", summary="添加精选文章")
@@ -422,6 +423,8 @@ async def update_mps(
                 message=f"更新公众号文章{str(e)}"
             )
         )
+    finally:
+        session.close()
 
 @router.get("/{mp_id}", summary="获取公众号详情")
 async def get_mp(
@@ -450,6 +453,8 @@ async def get_mp(
                 message="获取公众号详情失败"
             )
         )
+    finally:
+        session.close()
 @router.post("/by_article", summary="通过文章链接获取公众号详情")
 async def get_mp_by_article(
     url: str=Query(..., min_length=1),
@@ -550,6 +555,8 @@ async def add_mp(
                 message="添加公众号失败"
             )
         )
+    finally:
+        session.close()
 
 
 @router.delete("/{mp_id}", summary="删除订阅号")
@@ -586,6 +593,8 @@ async def delete_mp(
                 message="删除订阅号失败"
             )
         )
+    finally:
+        session.close()
 
 @router.put("/{mp_id}", summary="更新订阅号状态")
 async def update_mp_status(
@@ -636,3 +645,5 @@ async def update_mp_status(
                 message="更新订阅号失败"
             )
         )
+    finally:
+        session.close()

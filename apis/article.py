@@ -343,6 +343,8 @@ async def toggle_article_read_status(
                 message=f"更新文章阅读状态失败: {str(e)}"
             )
         )
+    finally:
+        session.close()
 
 
 @router.put("/{article_id}/favorite", summary="改变文章收藏状态")
@@ -385,6 +387,8 @@ async def toggle_article_favorite_status(
                 message=f"更新文章收藏状态失败: {str(e)}"
             )
         )
+    finally:
+        session.close()
 
 @router.delete("/clean_duplicate_articles", summary="清理重复文章")
 async def clean_duplicate(
@@ -505,6 +509,8 @@ async def get_articles(
                 message=f"获取文章列表失败: {str(e)}"
             )
         )
+    finally:
+        session.close()
 
 @router.post("/{article_id}/refresh", summary="刷新单篇文章")
 async def refresh_article(
@@ -602,7 +608,9 @@ def get_article_detail(
                 code=50001,
                 message=f"获取文章详情失败: {str(e)}"
             )
-        )   
+        )
+    finally:
+        session.close()
 
 @router.delete("/{article_id}", summary="删除文章")
 async def delete_article(
@@ -645,6 +653,8 @@ async def delete_article(
                 message=f"删除文章失败: {str(e)}"
             )
         )
+    finally:
+        session.close()
 
 @router.get("/{article_id}/next", summary="获取下一篇文章")
 def get_next_article(
@@ -703,6 +713,8 @@ def get_next_article(
                 message=f"获取下一篇文章失败: {str(e)}"
             )
         )
+    finally:
+        session.close()
 
 @router.get("/{article_id}/prev", summary="获取上一篇文章")
 def get_prev_article(
@@ -761,3 +773,5 @@ def get_prev_article(
                 message=f"获取上一篇文章失败: {str(e)}"
             )
         )
+    finally:
+        session.close()

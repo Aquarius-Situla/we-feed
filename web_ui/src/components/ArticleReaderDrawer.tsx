@@ -1,4 +1,5 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
+import DOMPurify from 'dompurify';
 import {
   Drawer,
   Stack,
@@ -76,6 +77,15 @@ export function ArticleReaderDrawer({ articleId, onClose, onRefreshList }: Artic
     }
   };
 
+  const sanitizedContent = useMemo(() => {
+    const raw = article?.content_html || article?.content || '';
+    if (!raw) return '';
+    return DOMPurify.sanitize(raw, {
+      ADD_TAGS: ['iframe'],
+      ADD_ATTR: ['target', 'referrerpolicy', 'allowfullscreen'],
+    });
+  }, [article?.content_html, article?.content]);
+
   return (
     <Drawer
       opened={Boolean(articleId)}
@@ -147,7 +157,7 @@ export function ArticleReaderDrawer({ articleId, onClose, onRefreshList }: Artic
             <Divider my="sm" />
 
             {/* Article Content Display */}
-            {article.content_html || article.content ? (
+            {sanitizedContent ? (
               <div
                 className="article-reader-body"
                 style={{
@@ -156,7 +166,7 @@ export function ArticleReaderDrawer({ articleId, onClose, onRefreshList }: Artic
                   wordBreak: 'break-word',
                 }}
                 dangerouslySetInnerHTML={{
-                  __html: article.content_html || article.content || '',
+                  __html: sanitizedContent,
                 }}
               />
             ) : (

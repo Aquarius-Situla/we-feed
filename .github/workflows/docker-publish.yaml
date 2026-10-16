@@ -52,6 +52,6 @@ jobs:
           labels: |
             ${{ steps.meta.outputs.labels }}
             org.opencontainers.image.title=WeFeed
-            org.opencontainers.image.description=WeFeed - ?????????????????????? RSS ?????
+            org.opencontainers.image.description=WeFeed - 微信公众号与微信读书 RSS 聚合订阅平台
             org.opencontainers.image.licenses=AGPL-3.0-or-later
             org.opencontainers.image.source=https://github.com/${{ github.repository }}

@@ -363,6 +363,18 @@ def verify_sso_request(request: Optional[Request], token: Optional[str]) -> bool
         if not _is_ip_trusted(request.client.host, trusted_list):
             return False
 
+    # 3. 兜底安全拦截：若既未配置 SSO_TRUST_SECRET 也未配置 SSO_TRUSTED_PROXIES，
+    # 强制仅允许来自本地回环地址（127.0.0.1, ::1）的请求，拒绝任意外部直接携带 'Bearer sso' 提权
+    if not sso_secret and not raw_trusted_proxies:
+        client_ip = request.client.host if (request and request.client) else None
+        if not client_ip or not _is_ip_trusted(client_ip, ["127.0.0.1", "::1"]):
+            from core.print import print_warning
+            print_warning(
+                f"[SSO 安全拦截] 启用了 SSO_TRUST_PROXY 但未配置 SSO_TRUST_SECRET 或 SSO_TRUSTED_PROXIES，"
+                f"已拒绝非本地 IP ({client_ip or 'unknown'}) 的免密提权请求！"
+            )
+            return False
+
     return True
 
 async def get_current_user(request: Request = None, token: str = Depends(oauth2_scheme)):
