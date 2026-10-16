@@ -364,15 +364,22 @@ def verify_sso_request(request: Optional[Request], token: Optional[str]) -> bool
             return False
 
     # 3. 兜底安全拦截：若既未配置 SSO_TRUST_SECRET 也未配置 SSO_TRUSTED_PROXIES，
-    # 强制仅允许来自本地回环地址（127.0.0.1, ::1）的请求，拒绝任意外部直接携带 'Bearer sso' 提权
+    # 仅允许来自本地回环或内网反代/Docker容器网段（RFC1918 私有地址与回环地址），
+    # 坚决拒绝任意公网客户端 IP 直接携带 'Bearer sso' 伪造提权
     if not sso_secret and not raw_trusted_proxies:
         client_ip = request.client.host if (request and request.client) else None
-        if not client_ip or not _is_ip_trusted(client_ip, ["127.0.0.1", "::1"]):
-            from core.print import print_warning
-            print_warning(
-                f"[SSO 安全拦截] 启用了 SSO_TRUST_PROXY 但未配置 SSO_TRUST_SECRET 或 SSO_TRUSTED_PROXIES，"
-                f"已拒绝非本地 IP ({client_ip or 'unknown'}) 的免密提权请求！"
-            )
+        if not client_ip:
+            return False
+        try:
+            c_ip = ipaddress.ip_address(client_ip)
+            if not (c_ip.is_private or c_ip.is_loopback):
+                from core.print import print_warning
+                print_warning(
+                    f"[SSO 安全拦截] 启用了 SSO_TRUST_PROXY 但未配置 SSO_TRUST_SECRET 或 SSO_TRUSTED_PROXIES，"
+                    f"已拒绝公网客户端 IP ({client_ip}) 的免密提权请求！"
+                )
+                return False
+        except Exception:
             return False
 
     return True
