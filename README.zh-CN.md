@@ -116,6 +116,11 @@ docker run -d \
 
 本项目采用 **[GNU Affero General Public License v3.0 or later (AGPL-3.0-or-later)](LICENSE)** 协议开源。
 
+```text
+Copyright (C) 2026 Situla <https://github.com/Aquarius-Situla/we-feed>
+Copyright (C) 2024-2026 rachelos <https://github.com/rachelos/we-mp-rss>
+```
+
 ### 原项目致谢
 WeFeed 是基于原开源项目 **[rachelos/we-mp-rss](https://github.com/rachelos/we-mp-rss)** 派生与重构的社区维护版本。根据原项目的 **MIT License** 要求，我们在此完整保留并声明原作者的版权信息：
 

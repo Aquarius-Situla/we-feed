@@ -13,12 +13,12 @@ class Config:
     article_detail_print_template = f"{base_path}/templates/print.html"
     articles_template = f"{base_path}/templates/articles.html"
     site={
-        "name": cfg.get("site.name", "WeRss"),
+        "name": cfg.get("site.name", "WeFeed"),
         "description": cfg.get("site.description", "A WeChat Official Account RSS Reader"), 
-        "keywords": cfg.get("site.keywords", "WeRss,RSS,微信公众号,RSS订阅,RSS阅读器,RSS订阅助手,RSS订阅器,RSS订阅器,RSS订阅器,RSS订阅器"),
+        "keywords": cfg.get("site.keywords", "WeFeed,WeRss,RSS,微信公众号,RSS订阅,RSS阅读器,RSS订阅助手"),
         "logo": cfg.get("site.logo", "/static/logo.svg"),
         "favicon": cfg.get("site.favicon", "/static/logo.svg"),
-        "author": cfg.get("site.author", "WeRss Team"),
-        "copyright": cfg.get("site.copyright", "© 2024 WeRss Team"),
+        "author": cfg.get("site.author", "Situla"),
+        "copyright": cfg.get("site.copyright", "© 2026 Situla · WeFeed"),
     }
 base = Config()
