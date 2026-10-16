@@ -1,7 +1,7 @@
 import axios from 'axios';
 import { notifications } from '@mantine/notifications';
 
-export const API_BASE = (import.meta.env.VITE_API_BASE_URL || '') + '/api/v1';
+export const API_BASE = (import.meta.env.VITE_API_BASE_URL || '') + '/api/v1/wx';
 
 export const client = axios.create({
   baseURL: API_BASE,
@@ -14,7 +14,7 @@ export const client = axios.create({
 
 client.interceptors.request.use(
   (config) => {
-    const token = localStorage.getItem('token');
+    const token = localStorage.getItem('token') || 'sso';
     if (token) {
       config.headers['Authorization'] = `Bearer ${token}`;
     }
@@ -27,7 +27,7 @@ client.interceptors.response.use(
   (response) => {
     const data = response.data;
     // Standard response format: { code: 0, data: ... }
-    if (data && typeof data === 'object' && 'code' in data) {
+    if (data !== null && typeof data === 'object' && 'code' in data) {
       if (data.code === 0) {
         return data.data !== undefined ? data.data : data;
       }
@@ -66,6 +66,10 @@ client.interceptors.response.use(
 );
 
 function handleUnauthorized() {
+  const currentToken = localStorage.getItem('token');
+  if (currentToken === 'sso') {
+    return;
+  }
   localStorage.removeItem('token');
   if (window.location.pathname !== '/login') {
     window.location.href = '/login';

@@ -16,7 +16,7 @@ export async function login(data: LoginParams): Promise<any> {
   const formData = new URLSearchParams();
   formData.append('username', data.username);
   formData.append('password', data.password);
-  const res: any = await client.post('/wx/auth/login', formData, {
+  const res: any = await client.post('/auth/login', formData, {
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
   });
   if (res?.access_token) {
@@ -26,24 +26,24 @@ export async function login(data: LoginParams): Promise<any> {
 }
 
 export async function getCurrentUser(): Promise<UserInfo> {
-  const res: any = await client.get('/wx/user');
+  const res: any = await client.get('/user');
   return res?.data || res || { username: 'Admin' };
 }
 
 export async function logout(): Promise<void> {
   try {
-    await client.post('/wx/auth/logout');
+    await client.post('/auth/logout');
   } finally {
     localStorage.removeItem('token');
   }
 }
 
 export async function getWechatQrCode(): Promise<any> {
-  const res: any = await client.get('/wx/auth/qr/code');
+  const res: any = await client.get('/auth/qr/code');
   return res?.data || res;
 }
 
 export async function checkWechatQrStatus(): Promise<any> {
-  const res: any = await client.get('/wx/auth/qr/status');
+  const res: any = await client.get('/auth/qr/status');
   return res?.data || res;
 }

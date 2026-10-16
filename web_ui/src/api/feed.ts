@@ -23,9 +23,21 @@ export async function getFeeds(params: {
   kw?: string;
   status?: number;
 }): Promise<FeedListResponse> {
-  const res: any = await client.get('/mps', { params });
+  const page = params.page || 1;
+  const limit = params.pageSize || 24;
+  const offset = (page - 1) * limit;
+  const res: any = await client.get('/mps', {
+    params: {
+      limit,
+      offset,
+      kw: params.kw || undefined,
+      status: params.status !== undefined ? params.status : undefined,
+    },
+  });
+  const list = res?.list || res?.data?.list || [];
+  const total = res?.total ?? res?.data?.total ?? list.length;
   return {
-    list: (res?.list || []).map((item: any) => ({
+    list: list.map((item: any) => ({
       id: item.id || item.mp_id,
       name: item.name || item.mp_name || '未命名公众号',
       avatar: item.avatar || item.mp_cover || '/static/logo.svg',
@@ -35,7 +47,7 @@ export async function getFeeds(params: {
       created_at: item.created_at,
       updated_at: item.updated_at,
     })),
-    total: res?.total || 0,
+    total,
   };
 }
 

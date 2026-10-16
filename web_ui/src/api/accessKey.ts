@@ -13,7 +13,7 @@ export interface AccessKeyItem {
 }
 
 export async function listAccessKeys(): Promise<AccessKeyItem[]> {
-  const res: any = await client.get('/wx/auth/ak/list');
+  const res: any = await client.get('/auth/ak/list');
   return res?.data || res || [];
 }
 
@@ -22,10 +22,10 @@ export async function createAccessKey(data: {
   description?: string;
   expires_in_days?: number | null;
 }): Promise<AccessKeyItem> {
-  const res: any = await client.post('/wx/auth/ak/create', data);
+  const res: any = await client.post('/auth/ak/create', data);
   return res?.data || res;
 }
 
 export async function deleteAccessKey(id: string): Promise<any> {
-  return client.delete(`/wx/auth/ak/${id}`);
+  return client.delete(`/auth/ak/${id}`);
 }
