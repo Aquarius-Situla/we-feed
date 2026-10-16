@@ -263,6 +263,7 @@ export function FeedsPage() {
                       h={44}
                       radius="xl"
                       fallbackSrc="/static/logo.svg"
+                      referrerPolicy="no-referrer"
                       style={{ border: '1px solid var(--mantine-color-default-border)' }}
                     />
                     <Box style={{ overflow: 'hidden' }}>
