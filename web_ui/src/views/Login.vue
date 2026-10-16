@@ -61,11 +61,9 @@
       </div>
     </div>
     <div class="login-footer">
-      <div class="copyright">Design By Rachel</div>
+      <div class="copyright">WeFeed - 微信公众号订阅助手</div>
       <div class="footer-links">
-        <a-link href="https://github.com/rachelos/we-mp-rss" target="_blank">GitHub</a-link>
-        <span class="divider">|</span>
-        <a-link href="https://gitee.com/rachel_os/we-mp-rss" target="_blank">Gitee</a-link>
+        <a-link href="https://github.com/Aquarius-Situla/we-feed" target="_blank">GitHub</a-link>
         <span class="divider">|</span>
         <a-link href="/api/docs" target="_blank">Docs</a-link>
       </div>

@@ -153,7 +153,7 @@ const formatUptime = (seconds: number): string => {
 
 // 定义打开链接的函数
 const openUpdateLink = () => {
-  window.open("https://github.com/rachelos/we-mp-rss", "_blank");
+  window.open("https://github.com/Aquarius-Situla/we-feed", "_blank");
 };
 
 // 手动刷新文章统计
