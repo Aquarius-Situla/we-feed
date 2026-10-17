@@ -323,7 +323,7 @@ async def download_export_file(
     filename: str = Query(..., description="文件名"),
     mp_id: Optional[str] = Query(None, description="公众号ID"),
     delete_after_download: bool = Query(False, description="下载后删除文件"),
-    # current_user: dict = Depends(get_current_user)
+    current_user: dict = Depends(get_current_user_or_ak)
 ):
     """
     下载导出的文件
@@ -668,6 +668,44 @@ def process_image_crop(
     return output_buffer.getvalue(), (original_width, original_height), (new_width, new_height)
 
 
+def validate_safe_external_url(url: str) -> bool:
+    """
+    SSRF 安全校验：仅允许公网可达的 HTTP/HTTPS 目标，阻断回环及内网私有地址探测
+    """
+    try:
+        from urllib.parse import urlparse
+        import ipaddress
+        import socket
+
+        parsed = urlparse(url)
+        if parsed.scheme not in ('http', 'https'):
+            return False
+
+        hostname = parsed.hostname
+        if not hostname:
+            return False
+
+        # 尝试直接解析为 IP 地址或通过 DNS 解析
+        try:
+            ip_obj = ipaddress.ip_address(hostname)
+        except ValueError:
+            try:
+                ip_str = socket.gethostbyname(hostname)
+                ip_obj = ipaddress.ip_address(ip_str)
+            except (socket.gaierror, ValueError):
+                return False
+
+        # 严格禁止私有 IP、回环 IP、链路本地、保留网段及广播
+        if (ip_obj.is_private or ip_obj.is_loopback or 
+            ip_obj.is_link_local or ip_obj.is_reserved or 
+            ip_obj.is_multicast or ip_obj.is_unspecified):
+            return False
+
+        return True
+    except Exception:
+        return False
+
+
 @router.post("/image/crop", summary="图片裁剪")
 async def crop_image(
     file: Optional[UploadFile] = File(None),
@@ -715,6 +753,9 @@ async def crop_image(
             # 从上传文件获取
             image_data = await file.read()
         elif image_url:
+            # SSRF 防御拦截
+            if not validate_safe_external_url(image_url):
+                return error_response(400, "非法的图片 URL 或目标地址受限 (SSRF 拦截)")
             # 从URL下载
             async with httpx.AsyncClient(timeout=30) as client:
                 response = await client.get(image_url)
@@ -836,7 +877,8 @@ async def proxy_remote_image(
     width: Optional[int] = Query(None, description="目标宽度"),
     height: Optional[int] = Query(None, description="目标高度"),
     mode: CropMode = Query("center", description="裁剪方式"),
-    output_format: str = Query("png", description="输出格式：png, jpeg, webp")
+    output_format: str = Query("png", description="输出格式：png, jpeg, webp"),
+    current_user: dict = Depends(get_current_user_or_ak)
 ):
     """
     代理下载远程图片，支持裁剪
@@ -850,6 +892,10 @@ async def proxy_remote_image(
     try:
         import httpx
         
+        # SSRF 防御拦截
+        if not validate_safe_external_url(url):
+            return error_response(403, "非法的图片 URL 或目标地址受限 (SSRF 拦截)")
+
         # 下载图片
         async with httpx.AsyncClient(timeout=30, follow_redirects=True) as client:
             response = await client.get(url)

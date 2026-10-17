@@ -341,20 +341,20 @@ class WeChatAPI:
                 with open(self.qr_code_path, 'wb') as f:
                     f.write(response.content)
             else:
-                # 使用第三方 API 生成二维码，避免 tkinter 依赖
-                import urllib.parse
-                api_url = f"https://api.qrserver.com/v1/create-qr-code/?size=200x200&data={urllib.parse.quote(qr_url)}"
-                response = self.session.get(api_url)
-                response.raise_for_status()
-                
-                # 确保图片格式正确
+                # 安全加固：本地生成二维码，杜绝向第三方 API 外发会话凭据与链接
+                import qrcode
+                qr = qrcode.QRCode(
+                    version=1,
+                    error_correction=qrcode.constants.ERROR_CORRECT_L,
+                    box_size=10,
+                    border=2,
+                )
+                qr.add_data(qr_url)
+                qr.make(fit=True)
+                img = qr.make_image(fill_color="black", back_color="white")
                 if not self.qr_code_path.lower().endswith('.png'):
                     self.qr_code_path = os.path.splitext(self.qr_code_path)[0] + '.png'
-                
-                # 写入文件
-                with open(self.qr_code_path, 'wb') as f:
-                    f.write(response.content)
-                
+                img.save(self.qr_code_path)
             logger.info(f"二维码已保存到: {self.qr_code_path}")
             
         except Exception as e:

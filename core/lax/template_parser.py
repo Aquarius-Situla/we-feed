@@ -860,7 +860,9 @@ class TemplateParser:
             'import', 'open', 'exec', 'eval', 'system', 'subprocess',
             '__import__', 'getattr', 'setattr', 'delattr', 'compile',
             'globals', 'locals', 'vars', 'dir', 'help', 'reload',
-            'input', 'file', 'execfile', 'reload', 'exit', 'quit'
+            'input', 'file', 'execfile', 'exit', 'quit',
+            '__class__', '__subclasses__', '__bases__', '__mro__',
+            '__globals__', '__builtins__', '__code__', '__reduce__', 'breakpoint'
         ]
         expr_lower = expr.lower()
         return not any(keyword in expr_lower for keyword in forbidden)

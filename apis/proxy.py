@@ -1,19 +1,20 @@
 """
 代理服务模块 - 用于突破 iframe 跨域限制
 """
-from fastapi import APIRouter, Request, Response
+from fastapi import APIRouter, Request, Response, Depends
 import httpx
 from urllib.parse import urlparse, urljoin, quote
 import logging
 import re
 from bs4 import BeautifulSoup
+from core.auth import get_current_user_or_ak
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(prefix="/proxy", tags=["代理服务"])
+router = APIRouter(prefix="/proxy", tags=["代理服务"], dependencies=[Depends(get_current_user_or_ak)])
 
-# 允许代理的域名白名单（安全加固：只允许微信公众号相关域名）
-ALLOWED_DOMAINS = ['mp.weixin.qq.com', 'weixin.qq.com', 'www.wesoso.com']
+# 允许代理的域名白名单（安全加固：严格只允许微信官方域名）
+ALLOWED_DOMAINS = ['mp.weixin.qq.com', 'weixin.qq.com']
 
 # 资源处理的标签和属性映射
 RESOURCE_TAGS = {

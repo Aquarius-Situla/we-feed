@@ -4,16 +4,24 @@
 GitHub 更新 API 接口
 """
 
-from fastapi import APIRouter, HTTPException, BackgroundTasks
+from fastapi import APIRouter, HTTPException, BackgroundTasks, Depends
 from pydantic import BaseModel
 from typing import Optional, List
 import logging
 import os
 from tools.github_updater import GitHubUpdater
+from core.auth import get_current_user
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(prefix="/github", tags=["GitHub更新"])
+router = APIRouter(prefix="/github", tags=["GitHub更新"], dependencies=[Depends(get_current_user)])
+
+
+def verify_admin_user(current_user: dict = Depends(get_current_user)):
+    """权限校验：仅管理员有权操作 Git 源码更新与回滚"""
+    if current_user.get("role") != "admin":
+        raise HTTPException(status_code=403, detail="权限不足：仅管理员允许执行 Git 更新操作")
+    return current_user
 
 
 class UpdateRequest(BaseModel):
@@ -59,19 +67,35 @@ class CommitInfo(BaseModel):
     date: str
 
 
+def _get_safe_repo_path(requested_path: Optional[str] = None) -> str:
+    """限制只能在当前仓库根目录执行 Git 操作，防止路径穿越"""
+    root_dir = os.path.abspath(os.getcwd())
+    if not requested_path:
+        return root_dir
+    norm_path = os.path.abspath(os.path.normpath(requested_path))
+    if norm_path != root_dir:
+        logger.warning(f"拒绝越权指定的 Git 操作目录: {requested_path}")
+        raise HTTPException(status_code=400, detail="禁止指定外部操作目录，仅限当前项目根目录")
+    return root_dir
+
+
 @router.get("/status", response_model=StatusResponse, summary="检查 Git 仓库状态")
-async def check_git_status(path: Optional[str] = None):
+async def check_git_status(
+    path: Optional[str] = None,
+    current_user: dict = Depends(verify_admin_user)
+):
     """
     检查当前 Git 仓库的状态
-    
-    - **path**: 可选的仓库路径，默认为项目根目录
     
     返回仓库的详细状态信息，包括当前分支、是否有未提交更改、与远程的差异等
     """
     try:
-        updater = GitHubUpdater(path)
+        safe_path = _get_safe_repo_path(path)
+        updater = GitHubUpdater(safe_path)
         status = updater.check_git_status()
         return status
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"检查 Git 状态失败: {str(e)}")
         raise HTTPException(status_code=500, detail=f"检查状态失败: {str(e)}")
@@ -80,23 +104,15 @@ async def check_git_status(path: Optional[str] = None):
 @router.post("/update", response_model=UpdateResponse, summary="从 GitHub 更新代码")
 async def update_from_github(
     request: UpdateRequest,
-    background_tasks: BackgroundTasks
+    background_tasks: BackgroundTasks,
+    current_user: dict = Depends(verify_admin_user)
 ):
     """
-    从 GitHub 仓库更新代码
-    
-    - **branch**: 目标分支，默认为当前分支
-    - **backup**: 是否在更新前创建备份，默认为 True
-    - **path**: 可选的仓库路径，默认为项目根目录
-    
-    更新过程包括：
-    1. 检查仓库状态
-    2. 创建备份（可选）
-    3. 获取远程更新
-    4. 执行代码更新
+    从 GitHub 仓库更新代码（需管理员权限）
     """
     try:
-        updater = GitHubUpdater(request.path)
+        safe_path = _get_safe_repo_path(request.path)
+        updater = GitHubUpdater(safe_path)
         
         # 检查状态
         status = updater.check_git_status()
@@ -130,21 +146,18 @@ async def update_from_github(
 @router.get("/commits", response_model=List[CommitInfo], summary="获取提交历史")
 async def get_commit_history(
     limit: int = 10,
-    path: Optional[str] = None
+    path: Optional[str] = None,
+    current_user: dict = Depends(verify_admin_user)
 ):
     """
-    获取提交历史记录
-    
-    - **limit**: 返回的提交数量，默认为 10
-    - **path**: 可选的仓库路径，默认为项目根目录
-    
-    返回最近的提交记录，包括提交哈希、消息、作者和日期
+    获取提交历史记录（需管理员权限）
     """
     try:
         if limit > 100:
             raise HTTPException(status_code=400, detail="提交数量不能超过 100")
         
-        updater = GitHubUpdater(path)
+        safe_path = _get_safe_repo_path(path)
+        updater = GitHubUpdater(safe_path)
         commits = updater.get_commit_history(limit)
         return commits
         
@@ -156,17 +169,16 @@ async def get_commit_history(
 
 
 @router.post("/rollback", summary="回滚到指定提交")
-async def rollback_to_commit(request: RollbackRequest):
+async def rollback_to_commit(
+    request: RollbackRequest,
+    current_user: dict = Depends(verify_admin_user)
+):
     """
-    回滚代码到指定的提交
-    
-    - **commit_hash**: 目标提交的完整哈希值
-    - **path**: 可选的仓库路径，默认为项目根目录
-    
-    **警告**: 此操作会永久丢失当前提交之后的更改，请谨慎使用
+    回滚代码到指定的提交（需管理员权限）
     """
     try:
-        updater = GitHubUpdater(request.path)
+        safe_path = _get_safe_repo_path(request.path)
+        updater = GitHubUpdater(safe_path)
         
         # 验证提交哈希是否存在
         commits = updater.get_commit_history(100)
@@ -191,16 +203,16 @@ async def rollback_to_commit(request: RollbackRequest):
 
 
 @router.get("/branches", summary="获取所有分支")
-async def get_branches(path: Optional[str] = None):
+async def get_branches(
+    path: Optional[str] = None,
+    current_user: dict = Depends(verify_admin_user)
+):
     """
-    获取仓库的所有分支列表
-    
-    - **path**: 可选的仓库路径，默认为项目根目录
-    
-    返回本地和远程分支的列表
+    获取仓库的所有分支列表（需管理员权限）
     """
     try:
-        updater = GitHubUpdater(path)
+        safe_path = _get_safe_repo_path(path)
+        updater = GitHubUpdater(safe_path)
         
         # 获取本地分支
         success, local_branches, _ = updater._run_git_command(['branch', '--format=%(refname:short)'])
