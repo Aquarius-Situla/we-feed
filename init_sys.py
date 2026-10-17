@@ -43,7 +43,10 @@ def init_user(_db: Db):
         pass
 def sync_models():
      # 同步模型到表结构
-         from data_sync import DatabaseSynchronizer
+         try:
+             from tools.data_sync import DatabaseSynchronizer
+         except ImportError:
+             from data_sync import DatabaseSynchronizer
          DB.create_tables()
          time.sleep(3)
          synchronizer = DatabaseSynchronizer(db_url=cfg.get("db",""))
