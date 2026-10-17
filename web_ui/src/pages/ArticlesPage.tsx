@@ -233,7 +233,7 @@ export function ArticlesPage() {
                       height={140}
                       fit="cover"
                       referrerPolicy="no-referrer"
-                      fallbackSrc="/static/logo.svg"
+                      fallbackSrc="/static/logo.svg?v=2"
                     />
                   </Box>
                 ) : null}

@@ -48,7 +48,7 @@ export function LoginPage() {
     <Container size={420} my={80}>
       <Paper withBorder shadow="md" p={30} radius="md">
         <Stack align="center" mb="lg">
-          <Image src="/static/logo.svg" w={56} h={56} fallbackSrc="/static/logo.svg" />
+          <Image src="/static/logo.svg?v=2" w={56} h={56} fallbackSrc="/static/logo.svg?v=2" />
           <Title order={2} size="h3">
             登录 WeFeed
           </Title>

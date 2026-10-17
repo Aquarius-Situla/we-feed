@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="static/logo.svg" alt="WeFeed Logo" width="100" height="100">
+<img src="static/logo.svg?v=2" alt="WeFeed Logo" width="100" height="100">
 
 # WeFeed
 

@@ -77,7 +77,7 @@ export function Header({ onOpenWereadAuth, onOpenWechatAuth }: HeaderProps) {
         {/* Left: Brand & Nav Links */}
         <Group gap="xl">
           <Group gap="xs" style={{ cursor: 'pointer' }} onClick={() => navigate('/')}>
-            <Image src="/static/logo.svg" w={32} h={32} fallbackSrc="/static/logo.svg" />
+            <Image src="/static/logo.svg?v=2" w={32} h={32} fallbackSrc="/static/logo.svg?v=2" />
             <Text fw={700} size="lg" variant="gradient" gradient={{ from: 'blue', to: 'cyan', deg: 90 }}>
               WeFeed
             </Text>

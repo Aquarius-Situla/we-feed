@@ -262,7 +262,7 @@ export function FeedsPage() {
                       w={44}
                       h={44}
                       radius="xl"
-                      fallbackSrc="/static/logo.svg"
+                      fallbackSrc="/static/logo.svg?v=2"
                       referrerPolicy="no-referrer"
                       style={{ border: '1px solid var(--mantine-color-default-border)' }}
                     />
