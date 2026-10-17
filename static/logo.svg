@@ -9,16 +9,23 @@
 
   <!-- Optically Centered Mark -->
   <g transform="translate(6, 2)">
-    <!-- G2 Curvature Apple Message Bubble Node -->
-    <path d="M 172 310
-             C 189.67 310 204 324.33 204 342
-             C 204 359.67 189.67 374 172 374
-             C 164.2 374 157.1 371.2 151.5 366.5
-             C 146.5 372 138 377.5 133 379
-             C 130.5 379.8 128.5 377.2 129.8 375
-             C 132.5 370.5 135 363.5 135 357.5
-             C 132.8 352.8 132 347.5 132 342
-             C 132 324.33 146.33 310 172 310 Z"
+    <!-- Authentic Apple iMessage Speech Bubble Node -->
+    <!-- 
+      - Plump horizontal oval body
+      - Sleek, organic tail pointing down-left at 225° (7:30)
+      - Outer curve: convex continuation of the left flank
+      - Tip: soft rounded beak
+      - Inner curve: concave scoop meeting the bottom contour
+    -->
+    <path d="M 172 312
+             C 193 312 208 325 208 342
+             C 208 359 193 372 172 372
+             C 162 372 152 369.5 144 366
+             C 134 374 122 384 114 388
+             C 111.5 389.2 109.5 386.8 111 384.5
+             C 115 378.5 122 366 122 356
+             C 122 350 126 344 136 342
+             C 136 325 151 312 172 312 Z"
           fill="url(#wf-1a-grad)" />
 
     <!-- Inner Broadcast Wave (R=96, W=36) -->
