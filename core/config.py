@@ -36,6 +36,8 @@ class Config:
         parser.add_argument('-config', help='配置文件', default='config.yaml')
         parser.add_argument('-job', help='启动任务', default=False)
         parser.add_argument('-init', help='初始化数据库,初始化用户', default=False)
+        parser.add_argument('-doctor', '--doctor', action='store_true', help='运行系统健康体检', default=False)
+        parser.add_argument('-test', '--test', action='store_true', help='运行系统自动化冒烟测试', default=False)
         args, _ = parser.parse_known_args()
         return args
     def _encrypt(self, data):

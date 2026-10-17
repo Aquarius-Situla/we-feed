@@ -1,7 +1,0 @@
-{"bookId": "MP_WXS_3528995129"}                              -> HTTP 200 {"errCode":-2010,"errMsg":"用户不存在","errLog":"C9Fd0LQ","info":""}
-{"bookIds": ["MP_WXS_3528995129"]}                           -> HTTP 200 {"errCode":-2010,"errMsg":"用户不存在","errLog":"C6432yy","info":""}
-{"bookIds": "MP_WXS_3528995129"}                             -> HTTP 200 {"errCode":-2010,"errMsg":"用户不存在","errLog":"C45aB2h","info":""}
-{"bookInfo": {"bookId": "MP_WXS_3528995129"}}                -> HTTP 200 {"errCode":-2010,"errMsg":"用户不存在","errLog":"C3xh06b","info":""}
-{"bids": ["MP_WXS_3528995129"]}                              -> HTTP 200 {"errCode":-2010,"errMsg":"用户不存在","errLog":"C4r81yo","info":""}
-{}                                                           -> HTTP 200 {"errCode":-2010,"errMsg":"用户不存在","errLog":"CA2CAGr","info":""}
-shelf/sync 对照                                                -> HTTP 200 {"errCode":-2010,"errMsg":"用户不存在","errLog":"C94U6hM","info":""}

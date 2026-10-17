@@ -28,3 +28,5 @@ test.yaml
 .travis
 test.py
 .codeartsdoer
+node_modules/
+**/node_modules/

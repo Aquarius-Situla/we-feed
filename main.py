@@ -6,16 +6,31 @@ if sys.platform == 'win32':
     asyncio.set_event_loop_policy(asyncio.WindowsProactorEventLoopPolicy())
 
 from core.config import cfg
-if cfg.get("redis.server.enabled", False):
-        from tools.redis_server import run_redis_server
-        run_redis_server(config_path="config.yaml")
-import uvicorn
 from core.print import print_warning, print_info, print_success
 import threading
-from driver.auth import start_auth_service   
 import os
 
 if __name__ == '__main__':
+    # 命令行体检与自动化测试入口 (免重量级依赖)
+    if getattr(cfg.args, "doctor", False):
+        from tools.doctor import WeFeedDoctor
+        doctor = WeFeedDoctor()
+        sys.exit(doctor.run_all())
+
+    if getattr(cfg.args, "test", False):
+        import unittest
+        suite = unittest.defaultTestLoader.discover('tests/smoke')
+        runner = unittest.TextTestRunner(verbosity=2)
+        result = runner.run(suite)
+        sys.exit(0 if result.wasSuccessful() else 1)
+
+    if cfg.get("redis.server.enabled", False):
+        from tools.redis_server import run_redis_server
+        run_redis_server(config_path="config.yaml")
+
+    import uvicorn
+    from driver.auth import start_auth_service
+
     print("环境变量:")
     for k,v in os.environ.items():
         print(f"{k}={v}")
