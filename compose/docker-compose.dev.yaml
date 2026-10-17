@@ -46,8 +46,6 @@ services:
       - ../main.py:/app/main.py
       - ../web.py:/app/web.py
       - ../init_sys.py:/app/init_sys.py
-      - ../data_sync.py:/app/data_sync.py
-      - ../job.py:/app/job.py
       - ../data:/app/data
     depends_on:
       redis:
