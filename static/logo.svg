@@ -1,7 +1,7 @@
 <svg viewBox="0 0 512 512" width="100%" height="100%" fill="none" xmlns="http://www.w3.org/2000/svg">
   <defs>
     <!-- Cupertino Emerald Gradient -->
-    <linearGradient id="wf-pure-grad" x1="140" y1="380" x2="380" y2="140" gradientUnits="userSpaceOnUse">
+    <linearGradient id="wf-t1" x1="140" y1="380" x2="380" y2="140" gradientUnits="userSpaceOnUse">
       <stop offset="0%" stop-color="#059669" />
       <stop offset="55%" stop-color="#10B981" />
       <stop offset="100%" stop-color="#34D399" />
@@ -9,20 +9,28 @@
   </defs>
 
   <!-- Mathematically and optically centered at (256, 256) -->
-  <!-- Total bounding box: 240px x 240px, perfectly balanced -->
   <g transform="translate(4, 2)">
-    <!-- Pure Solid Harmonic Anchor (Origin Node) -->
-    <circle cx="166" cy="346" r="30" fill="url(#wf-pure-grad)" />
+    <!-- WeFeed Dialogue Seed: Subtle Proportional Organic Beak (~10px extension at 225°) -->
+    <path d="M 166 316
+             C 182.57 316 196 329.43 196 346
+             C 196 362.57 182.57 376 166 376
+             C 158 376 151 373 146 369
+             C 140 373 133 376 130 376.5
+             C 128.5 376.8 127.5 375.2 128.5 374
+             C 130.5 371 133 365 133 361
+             C 131 356.5 130 351.5 130 346
+             C 130 329.43 143.43 316 166 316 Z"
+          fill="url(#wf-t1)" />
 
-    <!-- Inner Concentric Wave (R=98, Stroke=36) -->
+    <!-- Inner Concentric Broadcast Wave (R=98, Stroke=36) -->
     <path d="M 166 248 A 98 98 0 0 1 264 346"
-          stroke="url(#wf-pure-grad)"
+          stroke="url(#wf-t1)"
           stroke-width="36"
           stroke-linecap="round" />
 
-    <!-- Outer Concentric Wave (R=186, Stroke=36) -->
+    <!-- Outer Concentric Broadcast Wave (R=186, Stroke=36) -->
     <path d="M 166 160 A 186 186 0 0 1 352 346"
-          stroke="url(#wf-pure-grad)"
+          stroke="url(#wf-t1)"
           stroke-width="36"
           stroke-linecap="round" />
   </g>
