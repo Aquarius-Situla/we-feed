@@ -36,11 +36,13 @@ import {
   ArticleItem,
 } from '../api/article';
 import { getFeeds, FeedItem } from '../api/feed';
+import { listTags, TagItem } from '../api/system';
 import ArticleReaderDrawer from '../components/ArticleReaderDrawer';
 
 export function ArticlesPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const initialMpId = searchParams.get('mp_id') || '';
+  const initialTagId = searchParams.get('tag_id') || '';
 
   const [articles, setArticles] = useState<ArticleItem[]>([]);
   const [total, setTotal] = useState<number>(0);
@@ -48,13 +50,15 @@ export function ArticlesPage() {
 
   // Filters
   const [selectedMpId, setSelectedMpId] = useState<string>(initialMpId);
+  const [selectedTagId, setSelectedTagId] = useState<string>(initialTagId);
   const [searchKw, setSearchKw] = useState<string>('');
   const [readFilter, setReadFilter] = useState<string>('all');
   const [page, setPage] = useState<number>(1);
   const pageSize = 12;
 
-  // Feeds dropdown options
+  // Feeds & Tags dropdown options
   const [feeds, setFeeds] = useState<FeedItem[]>([]);
+  const [tags, setTags] = useState<TagItem[]>([]);
 
   // Reader Drawer State
   const [activeArticleId, setActiveArticleId] = useState<string | null>(null);
@@ -62,6 +66,9 @@ export function ArticlesPage() {
   useEffect(() => {
     getFeeds({ page: 1, pageSize: 100 })
       .then((res) => setFeeds(res.list))
+      .catch(() => {});
+    listTags()
+      .then((res) => setTags(res))
       .catch(() => {});
   }, []);
 
@@ -74,6 +81,7 @@ export function ArticlesPage() {
         page,
         pageSize,
         mp_id: selectedMpId || undefined,
+        tag_id: selectedTagId || undefined,
         kw: searchKw || undefined,
         is_read: isReadParam,
       });
@@ -88,7 +96,7 @@ export function ArticlesPage() {
 
   useEffect(() => {
     fetchArticles();
-  }, [page, selectedMpId, readFilter]);
+  }, [page, selectedMpId, selectedTagId, readFilter]);
 
   const handleSelectMp = (val: string | null) => {
     setSelectedMpId(val || '');
@@ -166,6 +174,20 @@ export function ArticlesPage() {
 
           <Group gap="sm">
             <Select
+              value={selectedTagId}
+              onChange={(val) => {
+                setSelectedTagId(val || '');
+                setPage(1);
+              }}
+              data={[
+                { value: '', label: '全部分类标签' },
+                ...tags.map((t) => ({ value: t.id, label: t.name })),
+              ]}
+              w={150}
+              placeholder="按分类标签筛选"
+            />
+
+            <Select
               value={selectedMpId}
               onChange={(val) => {
                 setSelectedMpId(val || '');
@@ -173,7 +195,7 @@ export function ArticlesPage() {
               }}
               data={feedOptions}
               searchable
-              w={200}
+              w={180}
               placeholder="筛选公众号"
             />
 

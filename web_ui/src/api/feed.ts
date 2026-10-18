@@ -10,6 +10,7 @@ export interface FeedItem {
   status: number; // 1: active, 0: disabled
   created_at?: string;
   updated_at?: string;
+  tags?: { id: string; name: string }[];
 }
 
 export interface FeedListResponse {
@@ -21,6 +22,7 @@ export async function getFeeds(params: {
   page?: number;
   pageSize?: number;
   kw?: string;
+  tagId?: string;
   status?: number;
 }): Promise<FeedListResponse> {
   const page = params.page || 1;
@@ -31,6 +33,7 @@ export async function getFeeds(params: {
       limit,
       offset,
       kw: params.kw || undefined,
+      tag_id: params.tagId || undefined,
       status: params.status !== undefined ? params.status : undefined,
     },
   });
@@ -46,6 +49,7 @@ export async function getFeeds(params: {
       status: item.status ?? 1,
       created_at: item.created_at,
       updated_at: item.updated_at,
+      tags: Array.isArray(item.tags) ? item.tags : [],
     })),
     total,
   };

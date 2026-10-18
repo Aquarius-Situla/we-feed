@@ -226,15 +226,29 @@ async def get_mps(
     limit: int = Query(10, ge=1, le=100),
     offset: int = Query(0, ge=0),
     kw: str = Query(""),
+    tag_id: str = Query(None, description="状态或分类标签ID筛选"),
     status: int = Query(None, description="状态筛选: 1=启用, 0=停用, 不传=全部"),
     current_user: dict = Depends(get_current_user_or_ak)
 ):
     session = DB.get_session()
     try:
         from core.models.feed import Feed
+        import json
         query = session.query(Feed).filter(Feed.id != FEATURED_MP_ID)
         if kw:
             query = query.filter(Feed.mp_name.ilike(f"%{kw}%"))
+        if tag_id:
+            from core.models.tags import Tags
+            tag = session.query(Tags).filter(Tags.id == tag_id).first()
+            if tag and tag.mps_id:
+                try:
+                    raw = json.loads(tag.mps_id) if isinstance(tag.mps_id, str) else tag.mps_id
+                    tag_mp_ids = [str(item['id'] if isinstance(item, dict) and 'id' in item else item) for item in raw] if isinstance(raw, list) else []
+                    query = query.filter(Feed.id.in_(tag_mp_ids))
+                except Exception:
+                    query = query.filter(Feed.id.in_([]))
+            else:
+                query = query.filter(Feed.id.in_([]))
         if status is not None:
             query = query.filter(Feed.status == status)
         total = query.count()
@@ -254,6 +268,21 @@ async def get_mps(
             )
             article_counts = {item[0]: item[1] for item in counts}
 
+        # 查询关联的分类标签
+        from core.models.tags import Tags
+        all_tags = session.query(Tags).filter(Tags.status == 1).all()
+        feed_tags_map = {}
+        for t in all_tags:
+            if t.mps_id:
+                try:
+                    raw = json.loads(t.mps_id) if isinstance(t.mps_id, str) else t.mps_id
+                    if isinstance(raw, list):
+                        for item in raw:
+                            feed_id = str(item['id'] if isinstance(item, dict) and 'id' in item else item)
+                            feed_tags_map.setdefault(feed_id, []).append({"id": t.id, "name": t.name})
+                except Exception:
+                    pass
+
         mps_list = [{
                 "id": mp.id,
                 "mp_name": mp.mp_name,
@@ -261,7 +290,8 @@ async def get_mps(
                 "mp_intro": mp.mp_intro,
                 "status": mp.status,
                 "article_count": article_counts.get(mp.id, 0),
-                "created_at": mp.created_at.isoformat() if mp.created_at else ""
+                "created_at": mp.created_at.isoformat() if mp.created_at else "",
+                "tags": feed_tags_map.get(mp.id, [])
             } for mp in mps]
         return success_response({
             "list": mps_list,
@@ -272,6 +302,7 @@ async def get_mps(
             },
             "total": total
         })
+
     except Exception as e:
         print(f"获取公众号列表错误: {str(e)}")
         raise HTTPException(

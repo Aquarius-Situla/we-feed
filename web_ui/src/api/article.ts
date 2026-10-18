@@ -25,6 +25,7 @@ export async function getArticles(params: {
   page?: number;
   pageSize?: number;
   mp_id?: string;
+  tag_id?: string;
   kw?: string;
   has_content?: number;
   is_read?: number;
@@ -38,6 +39,7 @@ export async function getArticles(params: {
       limit,
       search: params.kw || undefined,
       mp_id: params.mp_id || undefined,
+      tag_id: params.tag_id || undefined,
       has_content: params.has_content !== undefined ? (params.has_content === 1 ? true : false) : undefined,
       is_read: params.is_read !== undefined ? (params.is_read === 1 ? true : false) : undefined,
     },

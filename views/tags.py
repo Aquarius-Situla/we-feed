@@ -44,8 +44,8 @@ async def tags_view(
             if tag.mps_id:
                 try:
                     mps_data = json.loads(tag.mps_id)
-                    mps_ids = [str(mp['id']) for mp in mps_data] if isinstance(mps_data, list) else []
-                except (json.JSONDecodeError, TypeError):
+                    mps_ids = [str(mp['id'] if isinstance(mp, dict) and 'id' in mp else mp) for mp in mps_data] if isinstance(mps_data, list) else []
+                except Exception:
                     mps_ids = []
             
             # 统计文章数量
@@ -152,8 +152,8 @@ async def tag_detail_view(
         if tag.mps_id:
             try:
                 mps_data = json.loads(tag.mps_id)
-                mps_ids = [str(mp['id']) for mp in mps_data] if isinstance(mps_data, list) else []
-            except (json.JSONDecodeError, TypeError):
+                mps_ids = [str(mp['id'] if isinstance(mp, dict) and 'id' in mp else mp) for mp in mps_data] if isinstance(mps_data, list) else []
+            except Exception:
                 mps_ids = []
         
         # 获取关联的公众号信息

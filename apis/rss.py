@@ -238,13 +238,26 @@ async def get_mp_articles_source(
             feed.mp_cover=cfg.get("rss.cover") or f"{rss_domain}static/logo.svg"
             #如果传入了tag_id就加载tag对应的订阅信息
             if tag_id is not None:
-                tags=session.query(Tags).filter(Tags.id == tag_id).first()
+                tags = session.query(Tags).filter(Tags.id == tag_id).first()
                 if tags:
-                    mps_ids = [str(mp['id']) for mp in json.loads(tags.mps_id)] if tags.mps_id else []
-                    query=query.filter(Feed.id.in_(mps_ids))
-                    feed.mp_name = tags.name
-                    feed.mp_intro = tags.intro
-                    feed.mp_cover = f'{rss_domain}{tags.cover}'
+                    mps_ids = []
+                    if tags.mps_id:
+                        try:
+                            raw_data = json.loads(tags.mps_id) if isinstance(tags.mps_id, str) else tags.mps_id
+                            if isinstance(raw_data, list):
+                                for item in raw_data:
+                                    if isinstance(item, dict) and "id" in item:
+                                        mps_ids.append(str(item["id"]))
+                                    elif isinstance(item, (str, int)):
+                                        mps_ids.append(str(item))
+                        except Exception:
+                            mps_ids = []
+                    query = query.filter(Feed.id.in_(mps_ids))
+                    feed.mp_name = tags.name or feed.mp_name
+                    feed.mp_intro = tags.intro or feed.mp_intro
+                    if tags.cover:
+                        feed.mp_cover = f'{rss_domain}{tags.cover}'
+
 
         
         if not feed:
