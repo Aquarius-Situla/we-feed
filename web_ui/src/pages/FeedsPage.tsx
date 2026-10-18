@@ -45,6 +45,7 @@ import {
   getRssUrl,
   FeedItem,
 } from '../api/feed';
+import { listTags, TagItem } from '../api/system';
 
 export function FeedsPage() {
   const navigate = useNavigate();
@@ -53,7 +54,9 @@ export function FeedsPage() {
   const [total, setTotal] = useState<number>(0);
   const [loading, setLoading] = useState<boolean>(false);
 
-  // Filters
+  // Tags & Filters
+  const [tags, setTags] = useState<TagItem[]>([]);
+  const [tagFilter, setTagFilter] = useState<string>('all');
   const [searchKw, setSearchKw] = useState<string>('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [page, setPage] = useState<number>(1);
@@ -81,6 +84,7 @@ export function FeedsPage() {
         page,
         pageSize,
         kw: searchKw || undefined,
+        tagId: tagFilter === 'all' ? undefined : tagFilter,
         status: statusParam,
       });
       setFeeds(data.list);
@@ -93,8 +97,12 @@ export function FeedsPage() {
   };
 
   useEffect(() => {
+    listTags().then(setTags).catch(() => {});
+  }, []);
+
+  useEffect(() => {
     fetchFeeds();
-  }, [page, statusFilter]);
+  }, [page, statusFilter, tagFilter]);
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -218,6 +226,19 @@ export function FeedsPage() {
 
           <Group gap="sm">
             <Select
+              value={tagFilter}
+              onChange={(val) => {
+                setTagFilter(val || 'all');
+                setPage(1);
+              }}
+              data={[
+                { value: 'all', label: '全部分类标签' },
+                ...tags.map((t) => ({ value: t.id, label: t.name })),
+              ]}
+              w={150}
+            />
+
+            <Select
               value={statusFilter}
               onChange={(val) => {
                 setStatusFilter(val || 'all');
@@ -228,7 +249,7 @@ export function FeedsPage() {
                 { value: 'active', label: '仅显示启用' },
                 { value: 'disabled', label: '仅显示已禁用' },
               ]}
-              w={140}
+              w={130}
             />
 
             <Menu shadow="md">
@@ -310,9 +331,16 @@ export function FeedsPage() {
                       <Text fw={600} size="sm" lineClamp={1}>
                         {feed.name}
                       </Text>
-                      <Badge size="xs" variant="light" color={feed.status === 1 ? 'teal' : 'gray'}>
-                        {feed.article_count || 0} 篇文章
-                      </Badge>
+                      <Group gap={4} mt={2} wrap="wrap">
+                        <Badge size="xs" variant="light" color={feed.status === 1 ? 'teal' : 'gray'}>
+                          {feed.article_count || 0} 篇文章
+                        </Badge>
+                        {feed.tags && feed.tags.map((t) => (
+                          <Badge key={t.id} size="xs" variant="outline" color="blue">
+                            {t.name}
+                          </Badge>
+                        ))}
+                      </Group>
                     </Box>
                   </Group>
 

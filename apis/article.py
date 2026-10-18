@@ -419,6 +419,7 @@ async def get_articles(
     status: str = Query(None, description="文章状态，多个用逗号分隔，如: updating,deleted"),
     search: str = Query(None),
     mp_id: str = Query(None),
+    tag_id: str = Query(None, description="根据分类标签ID筛选文章"),
     only_favorite: bool = Query(False),
     has_content: bool = Query(None, description="是否有正文: true=有, false=无, 不传=全部"),
     is_read: bool = Query(None, description="是否已读: true=已读, false=未读, 不传=全部"),
@@ -454,6 +455,16 @@ async def get_articles(
             query = query.filter(Article.status != DATA_STATUS.DELETED)
         if mp_id:
             query = query.filter(Article.mp_id == mp_id)
+        if tag_id:
+            from core.models.tags import Tags
+            from core.tag_util import parse_mps_ids
+            tag = session.query(Tags).filter(Tags.id == tag_id).first()
+            if tag:
+                tag_mp_ids = parse_mps_ids(tag.mps_id)
+                query = query.filter(Article.mp_id.in_(tag_mp_ids))
+            else:
+                query = query.filter(Article.mp_id.in_([]))
+
         if only_favorite:
             query = query.filter(Article.is_favorite == 1)
         if is_read is not None:

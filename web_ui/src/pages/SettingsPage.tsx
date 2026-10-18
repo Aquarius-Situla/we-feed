@@ -12,11 +12,14 @@ import {
   ActionIcon,
   Modal,
   TextInput,
+  Textarea,
+  MultiSelect,
   NumberInput,
   Tooltip,
   SimpleGrid,
   Card,
   Loader,
+  Menu,
 } from '@mantine/core';
 import {
   IconKey,
@@ -25,18 +28,33 @@ import {
   IconPlus,
   IconTrash,
   IconCopy,
+  IconEdit,
+  IconRss,
+  IconExternalLink,
 } from '@tabler/icons-react';
 import { notifications } from '@mantine/notifications';
+import { useNavigate } from 'react-router-dom';
 import {
   listAccessKeys,
   createAccessKey,
   deleteAccessKey,
   AccessKeyItem,
 } from '../api/accessKey';
-import { listTags, createTag, deleteTag, TagItem, getSysInfo, SysInfoResponse } from '../api/system';
+import {
+  listTags,
+  createTag,
+  updateTag,
+  deleteTag,
+  getTagRssUrl,
+  TagItem,
+  getSysInfo,
+  SysInfoResponse,
+} from '../api/system';
+import { getFeeds } from '../api/feed';
 import dayjs from 'dayjs';
 
 export function SettingsPage() {
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<string | null>('keys');
 
   // Access Keys
@@ -50,8 +68,13 @@ export function SettingsPage() {
   // Tags
   const [tags, setTags] = useState<TagItem[]>([]);
   const [tagsLoading, setTagsLoading] = useState<boolean>(false);
+  const [tagModalOpen, setTagModalOpen] = useState<boolean>(false);
+  const [editingTag, setEditingTag] = useState<TagItem | null>(null);
   const [tagName, setTagName] = useState<string>('');
-  const [creatingTag, setCreatingTag] = useState<boolean>(false);
+  const [tagIntro, setTagIntro] = useState<string>('');
+  const [tagMps, setTagMps] = useState<string[]>([]);
+  const [savingTag, setSavingTag] = useState<boolean>(false);
+  const [availableFeeds, setAvailableFeeds] = useState<{ value: string; label: string }[]>([]);
 
   // SysInfo
   const [sysInfo, setSysInfo] = useState<SysInfoResponse | null>(null);
@@ -93,9 +116,21 @@ export function SettingsPage() {
     }
   };
 
+  const fetchAvailableFeeds = async () => {
+    try {
+      const res = await getFeeds({ pageSize: 1000 });
+      setAvailableFeeds(res.list.map((f) => ({ value: f.id, label: f.name })));
+    } catch {
+      notifications.show({ color: 'red', message: '获取可选公众号列表失败' });
+    }
+  };
+
   useEffect(() => {
     if (activeTab === 'keys') fetchKeys();
-    if (activeTab === 'tags') fetchTags();
+    if (activeTab === 'tags') {
+      fetchTags();
+      fetchAvailableFeeds();
+    }
     if (activeTab === 'info') fetchSysInfo();
   }, [activeTab]);
 
@@ -134,29 +169,87 @@ export function SettingsPage() {
     notifications.show({ color: 'blue', message: `${label} 已复制到剪贴板！` });
   };
 
-  const handleCreateTag = async () => {
-    if (!tagName.trim()) return;
-    setCreatingTag(true);
+  const handleOpenCreateTag = () => {
+    setEditingTag(null);
+    setTagName('');
+    setTagIntro('');
+    setTagMps([]);
+    setTagModalOpen(true);
+    fetchAvailableFeeds();
+  };
+
+  const handleOpenEditTag = (tag: TagItem) => {
+    setEditingTag(tag);
+    setTagName(tag.name || '');
+    setTagIntro(tag.intro || '');
+    let mps = tag.mps_list || [];
+    if (!mps.length && tag.mps_id) {
+      try {
+        const parsed = JSON.parse(tag.mps_id);
+        if (Array.isArray(parsed)) {
+          mps = parsed.map((item: any) =>
+            typeof item === 'object' && item?.id ? String(item.id) : String(item)
+          );
+        }
+      } catch {}
+    }
+    setTagMps(mps);
+    setTagModalOpen(true);
+    fetchAvailableFeeds();
+  };
+
+  const handleSaveTag = async () => {
+    if (!tagName.trim()) {
+      notifications.show({ color: 'red', message: '标签名称不能为空' });
+      return;
+    }
+    setSavingTag(true);
     try {
-      await createTag(tagName.trim());
-      notifications.show({ color: 'teal', message: '标签创建成功' });
-      setTagName('');
+      const payload = {
+        name: tagName.trim(),
+        intro: tagIntro.trim(),
+        mps_id: tagMps,
+      };
+      if (editingTag) {
+        await updateTag(editingTag.id, payload);
+        notifications.show({ color: 'teal', message: `标签 "${tagName.trim()}" 已更新！` });
+      } else {
+        await createTag(payload);
+        notifications.show({ color: 'teal', message: `标签 "${tagName.trim()}" 创建成功！` });
+      }
+      setTagModalOpen(false);
       fetchTags();
-    } catch {
-      // error handled
+    } catch (err: any) {
+      notifications.show({
+        color: 'red',
+        message: err?.response?.data?.message || err?.message || '保存标签失败',
+      });
     } finally {
-      setCreatingTag(false);
+      setSavingTag(false);
     }
   };
 
-  const handleDeleteTag = async (id: string) => {
+  const handleDeleteTag = async (tag: TagItem) => {
+    if (!window.confirm(`确定要删除分类标签 "${tag.name}" 吗？关联的 RSS 聚合源将失效。`)) return;
     try {
-      await deleteTag(id);
-      notifications.show({ color: 'teal', message: '标签已删除' });
+      await deleteTag(tag.id);
+      notifications.show({ color: 'teal', message: `分类标签 "${tag.name}" 已删除` });
       fetchTags();
-    } catch {
-      // error handled
+    } catch (err: any) {
+      notifications.show({
+        color: 'red',
+        message: err?.response?.data?.message || err?.message || '删除分类标签失败',
+      });
     }
+  };
+
+  const handleCopyTagRss = (tagId: string, format: 'rss' | 'atom' | 'json' = 'rss') => {
+    const url = getTagRssUrl(tagId, format);
+    navigator.clipboard.writeText(url);
+    notifications.show({
+      color: 'blue',
+      message: `${format.toUpperCase()} 分类订阅源已复制到剪贴板！`,
+    });
   };
 
   return (
@@ -166,7 +259,7 @@ export function SettingsPage() {
           系统设置与密钥凭据
         </Title>
         <Text size="sm" c="dimmed">
-          管理用于 Miniflux、FreshRSS 等外部阅读器客户端认证的 Access Key、订阅标签与底层服务指标。
+          管理用于 Miniflux、FreshRSS 等外部阅读器客户端认证的 Access Key、订阅分类标签与底层服务指标。
         </Text>
       </Paper>
 
@@ -269,21 +362,23 @@ export function SettingsPage() {
         {/* Tab: Tags */}
         <Tabs.Panel value="tags" pt="md">
           <Paper p="md" radius="md" withBorder>
-            <Group mb="md" gap="sm">
-              <TextInput
-                placeholder="新标签名称..."
-                value={tagName}
-                onChange={(e) => setTagName(e.target.value)}
-                style={{ flex: 1, maxWidth: 320 }}
-              />
+            <Group justify="space-between" mb="md">
+              <Group gap="xs">
+                <Text fw={600} size="sm">
+                  订阅分类标签列表
+                </Text>
+                <Badge size="xs" variant="light" color="blue">
+                  共 {tags.length} 个分类
+                </Badge>
+              </Group>
               <Button
-                size="sm"
-                variant="light"
+                size="xs"
+                variant="filled"
+                color="blue"
                 leftSection={<IconPlus size={14} />}
-                loading={creatingTag}
-                onClick={handleCreateTag}
+                onClick={handleOpenCreateTag}
               >
-                添加标签
+                新建分类标签
               </Button>
             </Group>
 
@@ -293,31 +388,108 @@ export function SettingsPage() {
               </Stack>
             ) : !Array.isArray(tags) || tags.length === 0 ? (
               <Text c="dimmed" py="md">
-                暂无分类标签。
+                暂无分类标签。点击上方「新建分类标签」即可创建专属的公众号分类并生成聚合 RSS 源。
               </Text>
             ) : (
-              <Group gap="sm">
-                {(Array.isArray(tags) ? tags : []).map((t) => (
-                  <Badge
-                    key={t.id}
-                    size="lg"
-                    variant="light"
-                    color={t.color || 'blue'}
-                    rightSection={
-                      <ActionIcon
-                        variant="transparent"
-                        color="red"
-                        size="xs"
-                        onClick={() => handleDeleteTag(t.id)}
-                      >
-                        <IconTrash size={12} />
-                      </ActionIcon>
-                    }
-                  >
-                    {t.name}
-                  </Badge>
-                ))}
-              </Group>
+              <Table striped highlightOnHover verticalSpacing="sm">
+                <Table.Thead>
+                  <Table.Tr>
+                    <Table.Th>分类名称</Table.Th>
+                    <Table.Th>简介说明</Table.Th>
+                    <Table.Th>关联订阅数</Table.Th>
+                    <Table.Th>分类聚合源</Table.Th>
+                    <Table.Th>文章快捷浏览</Table.Th>
+                    <Table.Th>操作</Table.Th>
+                  </Table.Tr>
+                </Table.Thead>
+                <Table.Tbody>
+                  {tags.map((t) => {
+                    const mpCount =
+                      t.mp_count !== undefined
+                        ? t.mp_count
+                        : Array.isArray(t.mps_list)
+                        ? t.mps_list.length
+                        : 0;
+                    return (
+                      <Table.Tr key={t.id}>
+                        <Table.Td>
+                          <Badge size="md" variant="light" color="blue">
+                            {t.name}
+                          </Badge>
+                        </Table.Td>
+                        <Table.Td>
+                          <Text size="xs" c="dimmed" lineClamp={1}>
+                            {t.intro || '-'}
+                          </Text>
+                        </Table.Td>
+                        <Table.Td>
+                          <Badge size="xs" variant="outline" color={mpCount > 0 ? 'teal' : 'gray'}>
+                            {mpCount} 个公众号
+                          </Badge>
+                        </Table.Td>
+                        <Table.Td>
+                          <Menu shadow="md" position="bottom-start">
+                            <Menu.Target>
+                              <Button
+                                size="xs"
+                                variant="subtle"
+                                leftSection={<IconRss size={14} />}
+                              >
+                                复制订阅源
+                              </Button>
+                            </Menu.Target>
+                            <Menu.Dropdown>
+                              <Menu.Item onClick={() => handleCopyTagRss(t.id, 'rss')}>
+                                复制 RSS 2.0 源
+                              </Menu.Item>
+                              <Menu.Item onClick={() => handleCopyTagRss(t.id, 'atom')}>
+                                复制 Atom 源
+                              </Menu.Item>
+                              <Menu.Item onClick={() => handleCopyTagRss(t.id, 'json')}>
+                                复制 JSON Feed
+                              </Menu.Item>
+                            </Menu.Dropdown>
+                          </Menu>
+                        </Table.Td>
+                        <Table.Td>
+                          <Button
+                            size="xs"
+                            variant="subtle"
+                            leftSection={<IconExternalLink size={14} />}
+                            onClick={() => navigate(`/articles?tag_id=${t.id}`)}
+                          >
+                            浏览分类文章
+                          </Button>
+                        </Table.Td>
+                        <Table.Td>
+                          <Group gap="xs">
+                            <Tooltip label="编辑分类与关联公众号">
+                              <ActionIcon
+                                variant="subtle"
+                                color="blue"
+                                size="sm"
+                                onClick={() => handleOpenEditTag(t)}
+                              >
+                                <IconEdit size={16} />
+                              </ActionIcon>
+                            </Tooltip>
+                            <Tooltip label="删除分类">
+                              <ActionIcon
+                                variant="subtle"
+                                color="red"
+                                size="sm"
+                                onClick={() => handleDeleteTag(t)}
+                              >
+                                <IconTrash size={16} />
+                              </ActionIcon>
+                            </Tooltip>
+                          </Group>
+                        </Table.Td>
+                      </Table.Tr>
+                    );
+                  })}
+                </Table.Tbody>
+              </Table>
             )}
           </Paper>
         </Tabs.Panel>
@@ -401,6 +573,53 @@ export function SettingsPage() {
             </Button>
             <Button loading={creatingKey} onClick={handleCreateKey} color="blue">
               确认生成
+            </Button>
+          </Group>
+        </Stack>
+      </Modal>
+
+      {/* Create / Edit Tag Modal */}
+      <Modal
+        opened={tagModalOpen}
+        onClose={() => setTagModalOpen(false)}
+        title={editingTag ? '编辑订阅分类标签' : '新建订阅分类标签'}
+        centered
+        radius="md"
+        size="lg"
+      >
+        <Stack gap="md">
+          <TextInput
+            label="标签名称"
+            placeholder="例如: 科技前沿、深度阅读、财经观察"
+            value={tagName}
+            onChange={(e) => setTagName(e.target.value)}
+            required
+          />
+          <Textarea
+            label="简介描述"
+            placeholder="可选：简单描述该分类所涵盖的内容主题"
+            value={tagIntro}
+            onChange={(e) => setTagIntro(e.target.value)}
+            minRows={2}
+          />
+          <MultiSelect
+            label="关联公众号"
+            description="选择归属于该分类标签的公众号，保存后将自动归集并生成专属聚合 RSS 源"
+            placeholder="请选择或搜索公众号..."
+            data={availableFeeds}
+            value={tagMps}
+            onChange={setTagMps}
+            searchable
+            clearable
+            nothingFoundMessage="未找到公众号"
+            maxDropdownHeight={240}
+          />
+          <Group justify="flex-end" mt="md">
+            <Button variant="default" onClick={() => setTagModalOpen(false)}>
+              取消
+            </Button>
+            <Button loading={savingTag} onClick={handleSaveTag} color="blue">
+              {editingTag ? '保存修改' : '确认创建'}
             </Button>
           </Group>
         </Stack>

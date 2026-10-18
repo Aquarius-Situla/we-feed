@@ -100,15 +100,10 @@ def get_tags_view(
         
         # 处理标签数据
         tag_list = []
+        from core.tag_util import parse_mps_ids
         for tag in tags:
-            # 解析mps_id JSON
-            mps_ids = []
-            if tag.mps_id:
-                try:
-                    mps_data = json.loads(tag.mps_id)
-                    mps_ids = [str(mp['id']) for mp in mps_data] if isinstance(mps_data, list) else []
-                except (json.JSONDecodeError, TypeError):
-                    mps_ids = []
+            # 解析mps_id
+            mps_ids = parse_mps_ids(tag.mps_id)
             
             # 统计文章数量
             article_count = 0

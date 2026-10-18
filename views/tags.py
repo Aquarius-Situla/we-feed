@@ -13,6 +13,7 @@ from core.lax.template_parser import TemplateParser
 from views.config import base
 from driver.wxarticle import Web
 from core.cache import cache_view, clear_cache_pattern
+from core.tag_util import parse_mps_ids
 # 创建路由器
 router = APIRouter(tags=["标签"])
 
@@ -39,14 +40,8 @@ async def tags_view(
         # 处理标签数据
         tag_list = []
         for tag in tags:
-            # 解析mps_id JSON
-            mps_ids = []
-            if tag.mps_id:
-                try:
-                    mps_data = json.loads(tag.mps_id)
-                    mps_ids = [str(mp['id']) for mp in mps_data] if isinstance(mps_data, list) else []
-                except (json.JSONDecodeError, TypeError):
-                    mps_ids = []
+            # 解析mps_id
+            mps_ids = parse_mps_ids(tag.mps_id)
             
             # 统计文章数量
             article_count = 0
@@ -147,14 +142,8 @@ async def tag_detail_view(
         if not tag:
             raise HTTPException(status_code=404, detail="标签不存在")
         
-        # 解析mps_id JSON
-        mps_ids = []
-        if tag.mps_id:
-            try:
-                mps_data = json.loads(tag.mps_id)
-                mps_ids = [str(mp['id']) for mp in mps_data] if isinstance(mps_data, list) else []
-            except (json.JSONDecodeError, TypeError):
-                mps_ids = []
+        # 解析mps_id
+        mps_ids = parse_mps_ids(tag.mps_id)
         
         # 获取关联的公众号信息
         mps_info = []

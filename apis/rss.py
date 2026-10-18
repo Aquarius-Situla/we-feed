@@ -238,13 +238,23 @@ async def get_mp_articles_source(
             feed.mp_cover=cfg.get("rss.cover") or f"{rss_domain}static/logo.svg"
             #如果传入了tag_id就加载tag对应的订阅信息
             if tag_id is not None:
-                tags=session.query(Tags).filter(Tags.id == tag_id).first()
-                if tags:
-                    mps_ids = [str(mp['id']) for mp in json.loads(tags.mps_id)] if tags.mps_id else []
-                    query=query.filter(Feed.id.in_(mps_ids))
-                    feed.mp_name = tags.name
-                    feed.mp_intro = tags.intro
+                from core.tag_util import parse_mps_ids
+                tags = session.query(Tags).filter(Tags.id == tag_id).first()
+                if not tags:
+                    raise HTTPException(
+                        status_code=status.HTTP_404_NOT_FOUND,
+                        detail=error_response(
+                            code=40401,
+                            message="分类标签不存在或已删除"
+                        )
+                    )
+                mps_ids = parse_mps_ids(tags.mps_id)
+                query = query.filter(Feed.id.in_(mps_ids))
+                feed.mp_name = tags.name or feed.mp_name
+                feed.mp_intro = tags.intro or feed.mp_intro
+                if tags.cover:
                     feed.mp_cover = f'{rss_domain}{tags.cover}'
+
 
         
         if not feed:
