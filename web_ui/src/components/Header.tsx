@@ -63,7 +63,6 @@ export function Header({ onOpenWereadAuth, onOpenWechatAuth }: HeaderProps) {
     { label: '订阅源', path: '/', icon: <IconRss size={18} /> },
     { label: '文章流', path: '/articles', icon: <IconArticle size={18} /> },
     { label: '微信读书', path: '/weread', icon: <IconBook size={18} /> },
-    { label: '系统设置', path: '/settings', icon: <IconSettings size={18} /> },
   ];
 
   return (
