@@ -307,21 +307,9 @@ export function FeedsPage() {
                       style={{ border: '1px solid var(--mantine-color-default-border)' }}
                     />
                     <Box style={{ overflow: 'hidden' }}>
-                      <Group gap={4} wrap="nowrap" align="center">
-                        <Text fw={600} size="sm" lineClamp={1}>
-                          {feed.name}
-                        </Text>
-                        <Tooltip label="配置公众号名称">
-                          <ActionIcon
-                            variant="subtle"
-                            size="xs"
-                            color="gray"
-                            onClick={() => handleOpenEdit(feed)}
-                          >
-                            <IconSettings size={13} />
-                          </ActionIcon>
-                        </Tooltip>
-                      </Group>
+                      <Text fw={600} size="sm" lineClamp={1}>
+                        {feed.name}
+                      </Text>
                       <Badge size="xs" variant="light" color={feed.status === 1 ? 'teal' : 'gray'}>
                         {feed.article_count || 0} 篇文章
                       </Badge>
