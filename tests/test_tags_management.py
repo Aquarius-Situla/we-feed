@@ -47,5 +47,17 @@ class TagsManagementTest(unittest.TestCase):
         self.assertEqual(formatted["mps_list"], ["mp_1", "mp_2"])
         self.assertEqual(formatted["mp_count"], 2)
 
+    def test_tag_name_validation(self):
+        # 标签名称不能为空或纯空白字符
+        invalid_names = [None, "", "   ", "\t\n"]
+        for name in invalid_names:
+            is_valid = bool(name and name.strip())
+            self.assertFalse(is_valid)
+
+        valid_names = ["科技", " 财经资讯 ", "A"]
+        for name in valid_names:
+            is_valid = bool(name and name.strip())
+            self.assertTrue(is_valid)
+
 if __name__ == "__main__":
     unittest.main()

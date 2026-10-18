@@ -223,7 +223,7 @@ async def search_mp(
 
 @router.get("", summary="获取公众号列表")
 async def get_mps(
-    limit: int = Query(10, ge=1, le=100),
+    limit: int = Query(10, ge=1, le=1000),
     offset: int = Query(0, ge=0),
     kw: str = Query(""),
     tag_id: str = Query(None, description="状态或分类标签ID筛选"),
@@ -233,20 +233,16 @@ async def get_mps(
     session = DB.get_session()
     try:
         from core.models.feed import Feed
-        import json
+        from core.tag_util import parse_mps_ids
         query = session.query(Feed).filter(Feed.id != FEATURED_MP_ID)
         if kw:
             query = query.filter(Feed.mp_name.ilike(f"%{kw}%"))
         if tag_id:
             from core.models.tags import Tags
             tag = session.query(Tags).filter(Tags.id == tag_id).first()
-            if tag and tag.mps_id:
-                try:
-                    raw = json.loads(tag.mps_id) if isinstance(tag.mps_id, str) else tag.mps_id
-                    tag_mp_ids = [str(item['id'] if isinstance(item, dict) and 'id' in item else item) for item in raw] if isinstance(raw, list) else []
-                    query = query.filter(Feed.id.in_(tag_mp_ids))
-                except Exception:
-                    query = query.filter(Feed.id.in_([]))
+            if tag:
+                tag_mp_ids = parse_mps_ids(tag.mps_id)
+                query = query.filter(Feed.id.in_(tag_mp_ids))
             else:
                 query = query.filter(Feed.id.in_([]))
         if status is not None:
@@ -273,15 +269,9 @@ async def get_mps(
         all_tags = session.query(Tags).filter(Tags.status == 1).all()
         feed_tags_map = {}
         for t in all_tags:
-            if t.mps_id:
-                try:
-                    raw = json.loads(t.mps_id) if isinstance(t.mps_id, str) else t.mps_id
-                    if isinstance(raw, list):
-                        for item in raw:
-                            feed_id = str(item['id'] if isinstance(item, dict) and 'id' in item else item)
-                            feed_tags_map.setdefault(feed_id, []).append({"id": t.id, "name": t.name})
-                except Exception:
-                    pass
+            tag_mp_ids = parse_mps_ids(t.mps_id)
+            for feed_id in tag_mp_ids:
+                feed_tags_map.setdefault(feed_id, []).append({"id": t.id, "name": t.name})
 
         mps_list = [{
                 "id": mp.id,

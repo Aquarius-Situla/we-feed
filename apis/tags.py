@@ -61,6 +61,9 @@ async def create_tag(tag: TagsCreate, db: Session = Depends(get_db), cur_user: d
     参数:
     - tag: TagsCreate模型，包含标签信息
     """
+    if not tag.name or not tag.name.strip():
+        return error_response(code=400, message="标签名称不能为空")
+
     try:
         mps_id_str = "[]"
         if tag.mps_id is not None:
@@ -71,7 +74,7 @@ async def create_tag(tag: TagsCreate, db: Session = Depends(get_db), cur_user: d
 
         db_tag = TagsModel(
             id=str(uuid.uuid4()),
-            name=tag.name or '',
+            name=tag.name.strip(),
             cover=tag.cover or '',
             intro=tag.intro or '',
             mps_id=mps_id_str,
@@ -127,7 +130,9 @@ async def update_tag(tag_id: str, tag_data: TagsCreate, db: Session = Depends(ge
             return error_response(code=404, message="Tag not found")
         
         if tag_data.name is not None:
-            tag.name = tag_data.name
+            if not tag_data.name.strip():
+                return error_response(code=400, message="标签名称不能为空")
+            tag.name = tag_data.name.strip()
         if tag_data.cover is not None:
             tag.cover = tag_data.cover
         if tag_data.intro is not None:

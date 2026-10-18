@@ -457,15 +457,11 @@ async def get_articles(
             query = query.filter(Article.mp_id == mp_id)
         if tag_id:
             from core.models.tags import Tags
-            import json
+            from core.tag_util import parse_mps_ids
             tag = session.query(Tags).filter(Tags.id == tag_id).first()
-            if tag and tag.mps_id:
-                try:
-                    raw = json.loads(tag.mps_id) if isinstance(tag.mps_id, str) else tag.mps_id
-                    tag_mp_ids = [str(item['id'] if isinstance(item, dict) and 'id' in item else item) for item in raw] if isinstance(raw, list) else []
-                    query = query.filter(Article.mp_id.in_(tag_mp_ids))
-                except Exception:
-                    query = query.filter(Article.mp_id.in_([]))
+            if tag:
+                tag_mp_ids = parse_mps_ids(tag.mps_id)
+                query = query.filter(Article.mp_id.in_(tag_mp_ids))
             else:
                 query = query.filter(Article.mp_id.in_([]))
 

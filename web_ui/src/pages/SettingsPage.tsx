@@ -121,7 +121,7 @@ export function SettingsPage() {
       const res = await getFeeds({ pageSize: 1000 });
       setAvailableFeeds(res.list.map((f) => ({ value: f.id, label: f.name })));
     } catch {
-      // error handled
+      notifications.show({ color: 'red', message: '获取可选公众号列表失败' });
     }
   };
 
@@ -199,7 +199,10 @@ export function SettingsPage() {
   };
 
   const handleSaveTag = async () => {
-    if (!tagName.trim()) return;
+    if (!tagName.trim()) {
+      notifications.show({ color: 'red', message: '标签名称不能为空' });
+      return;
+    }
     setSavingTag(true);
     try {
       const payload = {
@@ -216,8 +219,11 @@ export function SettingsPage() {
       }
       setTagModalOpen(false);
       fetchTags();
-    } catch {
-      // error handled
+    } catch (err: any) {
+      notifications.show({
+        color: 'red',
+        message: err?.response?.data?.message || err?.message || '保存标签失败',
+      });
     } finally {
       setSavingTag(false);
     }
@@ -229,8 +235,11 @@ export function SettingsPage() {
       await deleteTag(tag.id);
       notifications.show({ color: 'teal', message: `分类标签 "${tag.name}" 已删除` });
       fetchTags();
-    } catch {
-      // error handled
+    } catch (err: any) {
+      notifications.show({
+        color: 'red',
+        message: err?.response?.data?.message || err?.message || '删除分类标签失败',
+      });
     }
   };
 

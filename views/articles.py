@@ -49,21 +49,20 @@ async def articles_view(
             order = "desc"
         
         # 预处理标签筛选的mp_ids
-        mps_ids = []
+        mps_ids = None
         if tag_id:
             tag = session.query(Tags.mps_id).filter(Tags.id == tag_id, Tags.status == 1).scalar()
             if tag:
-                try:
-                    mps_data = json.loads(tag)
-                    mps_ids = [str(mp['id'] if isinstance(mp, dict) and 'id' in mp else mp) for mp in mps_data] if isinstance(mps_data, list) else []
-                except Exception:
-                    mps_ids = []
+                from core.tag_util import parse_mps_ids
+                mps_ids = parse_mps_ids(tag)
+            else:
+                mps_ids = []
         
         # 构建基础查询条件
         base_conditions = [Article.status == 1]
         if mp_id:
             base_conditions.append(Article.mp_id == mp_id)
-        if mps_ids:
+        if mps_ids is not None:
             base_conditions.append(Article.mp_id.in_(mps_ids))
         if keyword and keyword.strip():
             search_filter = format_search_kw(keyword.strip())

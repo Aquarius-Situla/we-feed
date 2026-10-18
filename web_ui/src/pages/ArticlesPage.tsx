@@ -56,6 +56,14 @@ export function ArticlesPage() {
   const [page, setPage] = useState<number>(1);
   const pageSize = 12;
 
+  useEffect(() => {
+    const mpIdFromUrl = searchParams.get('mp_id') || '';
+    const tagIdFromUrl = searchParams.get('tag_id') || '';
+    setSelectedMpId(mpIdFromUrl);
+    setSelectedTagId(tagIdFromUrl);
+    setPage(1);
+  }, [searchParams]);
+
   // Feeds & Tags dropdown options
   const [feeds, setFeeds] = useState<FeedItem[]>([]);
   const [tags, setTags] = useState<TagItem[]>([]);
