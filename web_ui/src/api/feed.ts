@@ -51,16 +51,42 @@ export async function getFeeds(params: {
   };
 }
 
-export async function addFeed(data: { name: string; mp_id?: string; intro?: string }): Promise<any> {
-  return client.post('/mps', data);
+export async function addFeed(data: { name?: string; mp_name?: string; mp_id?: string; intro?: string; mp_intro?: string }): Promise<any> {
+  const payload = {
+    ...data,
+    mp_name: data.mp_name || data.name,
+    mp_intro: data.mp_intro || data.intro,
+  };
+  return client.post('/mps', payload);
 }
 
 export async function addFeedByArticle(url: string): Promise<any> {
-  return client.post('/mps/by_article', { url });
+  const cleanUrl = (url || '').trim();
+  return client.post('/mps/by_article', { url: cleanUrl }, { params: { url: cleanUrl } });
 }
 
 export async function updateFeedStatus(mpId: string, status: number): Promise<any> {
-  return client.put(`/mps/${mpId}`, null, { params: { status } });
+  return client.put(`/mps/${mpId}`, { status }, { params: { status } });
+}
+
+export async function updateFeed(
+  mpId: string,
+  data: {
+    name?: string;
+    mp_name?: string;
+    intro?: string;
+    mp_intro?: string;
+    status?: number;
+    avatar?: string;
+    mp_cover?: string;
+  }
+): Promise<any> {
+  const payload = {
+    ...data,
+    mp_name: data.mp_name || data.name,
+    mp_intro: data.mp_intro || data.intro,
+  };
+  return client.put(`/mps/${mpId}`, payload);
 }
 
 export async function deleteFeed(mpId: string): Promise<any> {

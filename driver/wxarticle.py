@@ -215,15 +215,32 @@ class WXArticleFetcher:
                     # 获取公众号名称
                     mp_name = None
                     try:
-                        mp_name = await page.evaluate('() => { const el = document.getElementById("js_wx_follow_nickname"); return el ? el.textContent : null; }')
+                        mp_name = await page.evaluate('''() => {
+                            if (window.nickname && String(window.nickname).trim()) {
+                                return String(window.nickname).trim();
+                            }
+                            const jsName = document.getElementById("js_name");
+                            if (jsName && jsName.textContent && jsName.textContent.trim()) {
+                                return jsName.textContent.trim();
+                            }
+                            const followNick = document.getElementById("js_wx_follow_nickname") ||
+                                               document.getElementById("js_wx_follow_nickname_large_font") ||
+                                               document.querySelector(".profile_nickname");
+                            if (followNick && followNick.textContent && followNick.textContent.trim()) {
+                                return followNick.textContent.trim();
+                            }
+                            const metaAuthor = document.querySelector('meta[property="og:article:author"]');
+                            if (metaAuthor && metaAuthor.content) {
+                                const a = metaAuthor.content.trim();
+                                const blacklist = ["关注", "点击", "蓝字", "扫码", "订阅", "分享", "阅读", "原创", "微信", "公众号"];
+                                if (!blacklist.some(k => a.includes(k))) {
+                                    return a;
+                                }
+                            }
+                            return null;
+                        }''')
                     except Exception:
                         pass
-
-                    if not mp_name:
-                        try:
-                            mp_name = await page.locator('meta[property="og:article:author"]').get_attribute("content", timeout=3000)
-                        except Exception:
-                            pass
 
                     # 获取biz
                     biz = None
