@@ -195,10 +195,14 @@ async def get_mp_articles_source(
     offset: int = Query(0, ge=0),
     kw:str="",
     is_update:bool=True,
-    content_type:str=Query(None,alias="ctype"),
-    template:str=None
-    # current_user: dict = Depends(get_current_user)
+    content_type:str=Query(None,alias="ctype")
 ):
+    # 安全加固：彻底阻断外部攻击者通过 template 查询参数触发 RCE（解决 Issue #479）
+    if "template" in request.query_params:
+        raise HTTPException(
+            status_code=400,
+            detail="出于系统安全防护考虑，公开 RSS 接口已永久禁用外部自定义 template 参数。"
+        )
     limit = clamp_rss_limit(limit)
     rss=RSS(name=f'{tag_id}_{feed_id}_{limit}_{offset}',ext=ext)
     rss.set_content_type(content_type)
@@ -298,7 +302,7 @@ async def get_mp_articles_source(
             }
             rss.cache_content(article.id, content_data)
         # 生成RSS XML
-        rss_xml = rss.generate(rss_list,ext=ext, title=f"{feed.mp_name}",link=feed_link,description=feed.mp_intro,image_url=feed.mp_cover,template=template)
+        rss_xml = rss.generate(rss_list,ext=ext, title=f"{feed.mp_name}",link=feed_link,description=feed.mp_intro,image_url=feed.mp_cover)
         
         return Response(
             content=rss_xml,
