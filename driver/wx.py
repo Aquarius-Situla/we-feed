@@ -2,8 +2,6 @@ from asyncio import wait_for
 from socket import timeout
 import sys
 
-from sqlalchemy import False_
-
 import driver
 from .playwright_driver import PlaywrightController
 from PIL import Image
@@ -16,7 +14,10 @@ import re
 from threading import Timer, Lock
 from .cookies import expire
 import json
-import psutil
+try:
+    import psutil
+except ImportError:
+    psutil = None
 from core.print import print_error,print_warning,print_info,print_success
 class Wx:
     _haslogin=False
@@ -32,19 +33,30 @@ class Wx:
     ext_data = None
     # 添加线程锁保护共享变量
     _login_lock = Lock()
+    _getcode_lock = Lock()
+    thread = None
+
     def __init__(self):
         self.lock_path=os.path.dirname(self.lock_file_path)
         self.refresh_interval=3660*24
-        self.controller=PlaywrightController()
+        self.controller=None
         if not os.path.exists(self.lock_path):
             os.makedirs(self.lock_path)
         self.Clean()
         self.release_lock()
         pass
 
+    def is_running(self) -> bool:
+        """检查登录流程后台线程是否正在运行"""
+        return self.thread is not None and self.thread.is_alive()
+
     def GetHasCode(self):
+        """检查二维码图片是否存在且有效（排除小于等于364字节的空图/损坏图）"""
         if os.path.exists(self.wx_login_url):
-            return True
+            try:
+                return os.path.getsize(self.wx_login_url) > 364
+            except Exception:
+                return False
         return False
     async def extract_token_from_requests(self):
         """从页面中提取token（异步）"""
@@ -307,36 +319,43 @@ class Wx:
                 print_error(f"恢复队列失败: {e}")
     def GetCode(self,CallBack=None,Notice=None):
         self.Notice=Notice
-        if  self.check_lock():
-            print_warning("微信公众平台登录脚本正在运行，请勿重复运行")
-            return {
-                "code":f"{self.wx_login_url}?t={(time.time())}",
-                "msg":"微信公众平台登录脚本正在运行，请勿重复运行！"}
+        with self._getcode_lock:
+            with self._login_lock:
+                self._haslogin = False
+            if self.check_lock():
+                print_warning("微信公众平台登录脚本正在运行，请勿重复运行")
+                return {
+                    "code": f"/{self.wx_login_url}?t={time.time()}",
+                    "msg": "微信公众平台登录脚本正在运行，请勿重复运行！",
+                    "is_running": True,
+                }
 
-        self.Clean()
-        print("子线程执行中")
+            self.Clean()
+            self.set_lock()
+            print("子线程执行中")
 
-        def run_wxLogin():
-            import asyncio
-            loop = asyncio.new_event_loop()
-            asyncio.set_event_loop(loop)
-            try:
-                loop.run_until_complete(self.wxLogin(CallBack, True))
-            finally:
-                loop.close()
+            def run_wxLogin():
+                import asyncio
+                loop = asyncio.new_event_loop()
+                asyncio.set_event_loop(loop)
+                try:
+                    loop.run_until_complete(self.wxLogin(CallBack, True))
+                finally:
+                    loop.close()
 
-        from core.thread import ThreadManager
-        self.thread = ThreadManager(target=run_wxLogin)
-        self.thread.start()  # 启动线程
-        from core.ver import VERSION
-        print(f"微信公众平台登录 v{VERSION}")
-        return WX_API.QRcode()
-    
+            from core.thread import ThreadManager
+            self.thread = ThreadManager(target=run_wxLogin)
+            self.thread.start()  # 启动线程
+            from core.ver import VERSION
+            print(f"微信公众平台登录 v{VERSION}")
+            return self.QRcode()
+
     wait_time=1
     def QRcode(self):
         return {
-            "code":f"/{self.wx_login_url}?t={(time.time())}",
-            "is_exists":self.GetHasCode(),
+            "code": f"/{self.wx_login_url}?t={time.time()}",
+            "is_exists": self.GetHasCode(),
+            "is_running": self.is_running(),
         }
     async def refresh_task(self):
         try:
@@ -349,7 +368,12 @@ class Wx:
         except Exception as e:
             raise Exception(f"浏览器关闭")  # 重新抛出异常以便外部捕获处理
     def QrStatus(self):
-        return {"login_status":self.HasLogin(),"qr_code":self.GetHasCode()}
+        return {
+            "login_status": self.HasLogin(),
+            "qr_code": self.GetHasCode(),
+            "is_running": self.is_running(),
+            "code_url": f"/{self.wx_login_url}?t={time.time()}",
+        }
 
     def HasLogin(self):
         with self._login_lock:
@@ -402,7 +426,7 @@ class Wx:
 
             # 复用已有的controller实例,避免重复创建
             if not hasattr(self, 'controller') or self.controller is None:
-                self.controller = PlaywrightController()
+                self.controller = PlaywrightController(apply_anti_crawler=False)
 
             controller = self.controller
             # 保存到临时变量，让 Call_Success 和 _extract_wechat_data 能使用
@@ -476,32 +500,54 @@ class Wx:
     async def _wait_qrcode_ready(self, page, qr_tag, timeout=30):
         """等待登录二维码图片加载完成（异步）
 
-        新版登录页可能默认展示"微信快捷登录"（open.weixin.qq.com iframe），
-        此时经典二维码处于隐藏状态且src为空，直接截图会得到空白图片或超时。
-        检测到该情况时点击"扫码登录"链接切换回二维码登录，
-        再等待二维码图片可见且真正加载完成。
+        可能的情况：
+        1. 默认展示账号密码登录（mode === 0），需要点击右上角图标切换到扫码登录
+        2. 默认展示微信快捷登录（showFastLogin），二维码处于隐藏状态，需要点击"扫码登录"链接
+        3. 扫码登录模式下二维码图片正在请求中（src 为空或为 default_qrcode 占位图），需等待其完全渲染
         """
         import asyncio
 
         deadline = time.time() + timeout
-        switch_clicked = False
         while time.time() < deadline:
-            ready = await page.evaluate(
-                """(sel) => {
-                    const img = document.querySelector(sel);
-                    if (!img) return false;
-                    const style = window.getComputedStyle(img);
-                    if (style.display === 'none' || style.visibility === 'hidden') return false;
-                    return !!img.src && img.complete && img.naturalWidth > 50;
-                }""", qr_tag)
-            if ready:
-                return True
-            if not switch_clicked:
+            try:
+                # 1. 检查二维码图片是否已真正加载并显示
+                ready = await page.evaluate(
+                    """(sel) => {
+                        const img = document.querySelector(sel);
+                        if (!img) return false;
+                        const style = window.getComputedStyle(img);
+                        if (style.display === 'none' || style.visibility === 'hidden') return false;
+                        if (!img.src || img.src.includes('default_qrcode')) return false;
+                        return img.complete && img.naturalWidth > 50;
+                    }""", qr_tag)
+                if ready:
+                    return True
+
+                # 2. 检查是否在账号密码登录模式（检测密码输入框或账号表单，切勿仅凭通用切换按钮类名误触）
+                pwd_input = page.locator("input[type='password'], .login__type__container__account")
+                if await pwd_input.count() > 0 and await pwd_input.first.is_visible():
+                    scan_mode_btn = page.locator(".login__type__container__select-type__scan, a.login__type__container__select-type")
+                    if await scan_mode_btn.count() > 0:
+                        first_btn = scan_mode_btn.first
+                        if await first_btn.is_visible():
+                            print_info("检测到账号密码登录模式，切换到扫码登录...")
+                            await first_btn.click()
+                            await asyncio.sleep(0.5)
+                            continue
+
+                # 3. 检查是否在快捷登录页面（FastLogin），点击"扫码登录"链接
                 switch_link = page.locator("a.login__type__container__link_text", has_text="扫码登录")
-                if await switch_link.count() > 0 and await switch_link.first.is_visible():
-                    print_info("检测到快捷登录页面，切换到扫码登录...")
-                    await switch_link.first.click()
-                    switch_clicked = True
+                if await switch_link.count() > 0:
+                    first_link = switch_link.first
+                    if await first_link.is_visible():
+                        print_info("检测到快捷登录页面，切换到扫码登录...")
+                        await first_link.click()
+                        await asyncio.sleep(0.5)
+                        continue
+            except Exception:
+                # 页面可能处于导航或重排中，忽略异常重试
+                pass
+
             await asyncio.sleep(0.5)
         return False
 
@@ -517,14 +563,8 @@ class Wx:
         """
         import asyncio
 
-        # 使用上下文管理器确保资源清理
+        controller = None
         try:
-            if self.check_lock():
-                print_warning("微信公众平台登录脚本正在运行，请勿重复运行")
-                return None
-
-            self.set_lock()
-
             # 使用更短的锁持有时间，只保护变量修改
             self._login_lock.acquire()
             self._haslogin = False
@@ -533,9 +573,10 @@ class Wx:
             # 清理现有资源
             self.cleanup_resources()
 
-            self.controller = PlaywrightController()
-            # 初始化浏览器控制器
-            driver = self.controller
+            # 初始化浏览器控制器，注意必须关闭反爬注入，避免 CORS 预检导致微信登录页资源加载失败
+            controller = PlaywrightController(apply_anti_crawler=False)
+            self.controller = controller
+            driver = controller
             # 启动浏览器并打开微信公众平台
             print_info("正在启动浏览器...")
             await driver.start_browser()
@@ -553,25 +594,26 @@ class Wx:
 
             # 定位二维码区域
             qr_tag = ".login__type__container__scan__qrcode"
-            # 新版登录页可能默认展示"微信快捷登录"，二维码被隐藏或src为空，
-            # 需要先切换回扫码登录并等待二维码图片真正加载完成
+            # 等待二维码图片真正加载完成（自动识别账号密码模式/快捷登录模式并切换）
             if not await self._wait_qrcode_ready(page, qr_tag):
                 raise Exception("二维码加载超时，请重试")
+
             # 获取二维码图片URL
             qrcode = await page.query_selector(qr_tag)
             code_src = await qrcode.get_attribute("src")
-            print("正在生成二维码图片...")
-            print(f"code_src:{code_src}")
+            print_info("正在生成二维码图片...")
+            print_info(f"code_src: {code_src}")
 
             # 使用Playwright截图功能（添加异常处理）
             await qrcode.screenshot(path=self.wx_login_url)
 
-            print("二维码已保存为 wx_qrcode.png，请扫码登录...")
+            print_info("二维码已保存为 wx_qrcode.png，请扫码登录...")
             self.HasCode = True
             if os.path.getsize(self.wx_login_url) <= 364:
                 raise Exception("二维码图片获取失败，请重新扫码")
+
             # 等待登录成功（检测二维码图片加载完成）
-            print("等待扫码登录...")
+            print_info("等待扫码登录...")
             if self.Notice is not None:
                 self.Notice()
 
@@ -579,11 +621,9 @@ class Wx:
             def handle_frame_navigated(frame):
                 current_url = frame.url
                 if self.WX_HOME in current_url:
-                    print(f"登录成功，正在获取cookie和token...")
+                    print_info("登录成功，正在获取cookie和token...")
             page.on('framenavigated', handle_frame_navigated)
-            # 只等待主页面跳转到公众平台首页，
-            # 不能用 wait_for_event("framenavigated")：页面内的快捷登录iframe
-            # 加载时也会触发该事件，导致未扫码就误判为登录成功
+            # 只等待主页面跳转到公众平台首页
             await page.wait_for_url(lambda url: "cgi-bin/home" in url, timeout=5*60 * 1000)
 
             from .success import setStatus
@@ -595,7 +635,8 @@ class Wx:
         except Exception as e:
             if "Timeout" in str(e):
                 print_warning("\n扫码登录超时，请重新运行程序进行扫码登录")
-
+            elif "closed" in str(e).lower() or "target" in str(e).lower():
+                print_info("\n登录流程已取消或浏览器已关闭")
             else:
                 print_error(f"\n错误发生: {str(e)}")
             self.SESSION = None
@@ -604,7 +645,13 @@ class Wx:
             self.release_lock()
             if NeedExit:
                 self.Clean()
-            await self.Close()
+            try:
+                if controller:
+                    await controller.Close()
+            except Exception as e:
+                print_warning(f"关闭浏览器异常: {e}")
+            if getattr(self, 'controller', None) == controller:
+                self.controller = None
         return self.SESSION
     def format_token(self, cookies: list, token: str = ""):
         cookies_str=""
@@ -746,21 +793,31 @@ class Wx:
     async def Close(self):
         rel = False
         try:
+            self.release_lock()
             if hasattr(self, 'controller') and self.controller is not None:
                 await self.controller.Close()
+                self.controller = None
                 rel = True
+            # 等待后台登录线程彻底退出，避免刷新时并发冲突
+            if self.thread is not None and self.thread.is_alive():
+                try:
+                    if hasattr(self.thread, 'join'):
+                        self.thread.join(timeout=3)
+                except Exception as e:
+                    print_warning(f"等待登录线程退出异常: {e}")
+                self.thread = None
         except Exception as e:
             print_warning("浏览器未启动或已关闭")
             pass
         return rel
+
     def Clean(self):
         try:
-            os.remove(self.wx_login_url)
-        except:
+            if os.path.exists(self.wx_login_url):
+                os.remove(self.wx_login_url)
+        except Exception:
             pass
-        finally:
-           pass
-           
+
     def expire_all_cookies(self):
         """设置所有cookie为过期状态"""
         try:
@@ -773,34 +830,83 @@ class Wx:
         except Exception as e:
             print(f"设置cookie过期时出错: {str(e)}")
             return False
-            
+
     def check_lock(self, timeout: int = 300) -> bool:
-        if not os.path.exists(self.wx_login_url):
-            return False
-        return True
+        """检查是否有正在进行的登录流程（优先检查活跃线程，其次检查系统锁文件）"""
+        # 1. 优先检查活跃运行的登录线程
+        if self.is_running():
+            return True
+
+        # 2. 检查系统锁文件
+        if os.path.exists(self.lock_file_path):
+            try:
+                with open(self.lock_file_path, 'r') as f:
+                    content = f.read().strip()
+                if content:
+                    parts = content.split('|')
+                    if len(parts) >= 2 and parts[0].isdigit():
+                        pid = int(parts[0])
+                        lock_time = float(parts[1])
+                        # 检查超时（默认300秒）
+                        if time.time() - lock_time > timeout:
+                            print_warning(f"发现过期的登录锁 (超时 {timeout}s)，强制释放")
+                            self._force_release_lock()
+                            return False
+
+                        # 当前进程产生的锁：因 self.is_running() 已为 False，必定是残留失效锁
+                        if pid == os.getpid():
+                            print_warning("检测到当前进程残留失效锁，强制释放")
+                            self._force_release_lock()
+                            return False
+
+                        # 检查其他进程是否存在
+                        pid_alive = False
+                        if psutil is not None:
+                            pid_alive = psutil.pid_exists(pid)
+                        else:
+                            try:
+                                os.kill(pid, 0)
+                                pid_alive = True
+                            except (OSError, ProcessLookupError):
+                                pid_alive = False
+                        if pid_alive:
+                            return True
+                        else:
+                            # 进程已死亡但锁文件残留
+                            self._force_release_lock()
+                            return False
+            except Exception as e:
+                print_warning(f"检查锁文件异常: {e}")
+                self._force_release_lock()
+                return False
+        return False
+
     def set_lock(self):
         """创建锁定文件，写入当前进程PID和时间戳"""
-        os.makedirs(os.path.dirname(self.lock_file_path), exist_ok=True)
-        current_pid = os.getpid()
-        with open(self.lock_file_path, 'w') as f:
-            f.write(f"{current_pid}|{time.time()}")
-        self.isLOCK = True
-        
+        try:
+            os.makedirs(os.path.dirname(self.lock_file_path), exist_ok=True)
+            current_pid = os.getpid()
+            with open(self.lock_file_path, 'w') as f:
+                f.write(f"{current_pid}|{time.time()}")
+            self.isLOCK = True
+        except Exception as e:
+            print_warning(f"创建锁文件失败: {e}")
+
     def release_lock(self):
         """删除锁定文件"""
         try:
-            # 只释放当前进程持有的锁
+            # 只释放当前进程持有的锁，精确比对 PID 避免误删
             if os.path.exists(self.lock_file_path):
                 with open(self.lock_file_path, 'r') as f:
                     content = f.read().strip()
                 parts = content.split('|')
-                if parts and int(parts[0]) == os.getpid():
+                if parts and parts[0].isdigit() and int(parts[0]) == os.getpid():
                     os.remove(self.lock_file_path)
             self.isLOCK = False
             return True
         except Exception:
             return False
-    
+
     def _force_release_lock(self):
         """强制释放锁（用于清理过期或损坏的锁）"""
         try:
@@ -808,6 +914,7 @@ class Wx:
                 os.remove(self.lock_file_path)
         except Exception:
             pass
+        self.isLOCK = False
 
 
 WX_API = Wx()

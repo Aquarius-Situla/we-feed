@@ -47,3 +47,8 @@ export async function checkWechatQrStatus(): Promise<any> {
   const res: any = await client.get('/auth/qr/status');
   return res?.data || res;
 }
+
+export async function cancelWechatQrAuth(): Promise<any> {
+  const res: any = await client.get('/auth/qr/over');
+  return res?.data || res;
+}
