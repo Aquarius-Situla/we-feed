@@ -121,6 +121,29 @@ class CoreSmokeTest(unittest.TestCase):
         self.assertIn('referrerpolicy="no-referrer"', fixed_tag)
         self.assertIn('https://mmbiz.qpic.cn/', fixed_tag)
 
+    def test_rss_template_injection_disabled(self):
+        """冒烟 6: 验证 Issue #479 RSS 模板代码执行 (RCE) 漏洞防范机制"""
+        from core.rss import RSS
+        rss = RSS(name="smoke_test", ext="xml")
+        
+        # 1. 验证 generate_by_template 已被永久下线
+        with self.assertRaises(NotImplementedError):
+            rss.generate_by_template([{"title": "test"}], template="{{ 1 + 1 }}")
+            
+        # 2. 验证 generate 不再处理外部 template 并正常渲染标准 XML
+        rendered = rss.generate(
+            [{
+                "id": "test_001",
+                "title": "测试文章",
+                "link": "https://mp.weixin.qq.com/s/test",
+                "description": "摘要",
+                "updated": "2026-10-18 12:00:00"
+            }],
+            ext="xml",
+            title="WeFeed 测试频道"
+        )
+        self.assertIn("<title>WeFeed 测试频道</title>", rendered)
+
 
 if __name__ == '__main__':
     unittest.main()

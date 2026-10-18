@@ -851,6 +851,7 @@ class TemplateParser:
             'unquote': safe_unquote,
             'json_encode': safe_json_encode,
             'json_decode': safe_json_decode,
+            '__builtins__': {},
         }
         return safe_builtins
 

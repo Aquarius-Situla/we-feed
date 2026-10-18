@@ -341,15 +341,14 @@ class RSS:
                 return f.read()  
         except FileNotFoundError:
             return None     
-    def generate(self,rss_list: dict,ext=str, title: str = "Mp-We-Rss", 
-                    link: str = "https://github.com/rachelos/we-mp-rss",
-                    description: str = "RSS频道", language: str = "zh-CN",image_url:str="",template:str=None) -> str:
+    def generate(self, rss_list: dict, ext: str = "xml", title: str = "WeFeed", 
+                    link: str = "https://github.com/Aquarius-Situla/we-feed",
+                    description: str = "RSS频道", language: str = "zh-CN", image_url: str = "") -> str:
         """根据扩展名获取对应格式的RSS内容
         
         Args:
             rss_list: RSS条目列表
-            ext: 文件扩展名(.rss/.xml/.atom/.json)
-            **kwargs: 传递给各格式生成方法的参数
+            ext: 文件扩展名(.rss/.xml/.atom/.json/.md)
             
         Returns:
             对应格式的字符串
@@ -358,22 +357,19 @@ class RSS:
             ValueError: 当扩展名不支持时
         """
         ext = ext.lower().strip('.')
-        self.ext=ext
+        self.ext = ext
         if ext in ('rss', 'xml'):
-            return self.generate_rss(rss_list, title=title, link=link, description=description,language=language,image_url=image_url)
-        elif ext in ('atom','md','txt'):
-            return self.generate_atom(rss_list, title=title, link=link, description=description,language=language,image_url=image_url)
-        elif ext in ('json','jmd'):
-            return self.generate_json(rss_list, title=title, link=link, description=description,language=language,image_url=image_url)
-        elif template is not None:
-            return self.generate_by_template(rss_list,template, title=title, link=link, description=description,language=language,image_url=image_url)
+            return self.generate_rss(rss_list, title=title, link=link, description=description, language=language, image_url=image_url)
+        elif ext in ('atom', 'md', 'txt'):
+            return self.generate_atom(rss_list, title=title, link=link, description=description, language=language, image_url=image_url)
+        elif ext in ('json', 'jmd'):
+            return self.generate_json(rss_list, title=title, link=link, description=description, language=language, image_url=image_url)
         else:
             raise ValueError(f"Unsupported extension: {ext}")
-    def generate_by_template(self,rss_list: dict, template: str, title: str = "Mp-We-Rss",link: str = "https://github.com/rachelos/we-mp-rss",description: str = "RSS频道",language: str = "zh-CN",image_url:str=""):
-            from core.lax import TemplateParser
-            template = TemplateParser(template)
-            return template.render({"articles": rss_list, "title": title,"link":link,"description":description,"language":language,"image_url":image_url})
-            pass
+
+    def generate_by_template(self, *args, **kwargs):
+        """出于系统安全防护（防御 RCE 代码执行漏洞，解决 Issue #479），永久下线此机制"""
+        raise NotImplementedError("出于系统安全防护考虑，RSS 模块已永久下线自定义模板生成机制以防范代码执行漏洞 (RCE)。")
     def clear_cache(self,mp_id:str=""):
 
         """清除所有缓存文件
