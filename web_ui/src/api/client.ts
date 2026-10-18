@@ -36,11 +36,12 @@ client.interceptors.response.use(
         handleUnauthorized();
         return Promise.reject(new Error('登录已过期'));
       }
-      const msg = data.message || data.detail || '请求失败';
+      const rawMsg = data.message || data.detail || '请求失败';
+      const msg = formatErrorMessage(rawMsg);
       notifications.show({
         color: 'red',
         title: '错误',
-        message: String(msg),
+        message: msg,
       });
       return Promise.reject(new Error(msg));
     }
@@ -50,21 +51,54 @@ client.interceptors.response.use(
     if (error.response?.status === 401) {
       handleUnauthorized();
     } else {
-      const msg =
+      const rawMsg =
         error.response?.data?.message ||
-        error.response?.data?.detail?.message ||
         error.response?.data?.detail ||
         error.message ||
         '网络请求失败';
+      const msg = formatErrorMessage(rawMsg);
       notifications.show({
         color: 'red',
         title: '请求错误',
-        message: String(msg),
+        message: msg,
       });
     }
     return Promise.reject(error);
   }
 );
+
+export function formatErrorMessage(err: any): string {
+  if (!err) return '未知错误';
+  if (typeof err === 'string') return err;
+  if (typeof err.message === 'string') return err.message;
+  if (typeof err.detail === 'string') return err.detail;
+  if (Array.isArray(err)) {
+    const msgs = err
+      .map((item) => {
+        if (typeof item === 'string') return item;
+        if (item && typeof item === 'object') {
+          const loc = Array.isArray(item.loc)
+            ? item.loc.filter((p: any) => p !== 'body' && p !== 'query').join('.')
+            : '';
+          const m = item.msg || item.message || JSON.stringify(item);
+          return loc ? `${loc}: ${m}` : m;
+        }
+        return String(item);
+      })
+      .filter(Boolean);
+    if (msgs.length > 0) return msgs.join('; ');
+  }
+  if (typeof err === 'object') {
+    if (err.msg && typeof err.msg === 'string') return err.msg;
+    if (err.detail) return formatErrorMessage(err.detail);
+    try {
+      return JSON.stringify(err);
+    } catch {
+      return String(err);
+    }
+  }
+  return String(err);
+}
 
 function handleUnauthorized() {
   const currentToken = localStorage.getItem('token');

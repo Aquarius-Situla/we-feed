@@ -30,6 +30,7 @@ import {
   IconArrowRight,
   IconDownload,
   IconLink,
+  IconSettings,
 } from '@tabler/icons-react';
 import { notifications } from '@mantine/notifications';
 import { useNavigate } from 'react-router-dom';
@@ -38,6 +39,7 @@ import {
   addFeed,
   addFeedByArticle,
   updateFeedStatus,
+  updateFeed,
   deleteFeed,
   refreshFeed,
   getRssUrl,
@@ -62,6 +64,13 @@ export function FeedsPage() {
   const [addMode, setAddMode] = useState<'article' | 'name'>('article');
   const [addInput, setAddInput] = useState<string>('');
   const [adding, setAdding] = useState<boolean>(false);
+
+  // Edit Subscription Modal
+  const [editModalOpen, setEditModalOpen] = useState<boolean>(false);
+  const [editingFeed, setEditingFeed] = useState<FeedItem | null>(null);
+  const [editName, setEditName] = useState<string>('');
+  const [editIntro, setEditIntro] = useState<string>('');
+  const [savingEdit, setSavingEdit] = useState<boolean>(false);
 
   const fetchFeeds = async () => {
     setLoading(true);
@@ -155,6 +164,37 @@ export function FeedsPage() {
       // error handled
     } finally {
       setAdding(false);
+    }
+  };
+
+  const handleOpenEdit = (feed: FeedItem) => {
+    setEditingFeed(feed);
+    setEditName(feed.name);
+    setEditIntro(feed.mp_intro || '');
+    setEditModalOpen(true);
+  };
+
+  const handleSaveEdit = async () => {
+    if (!editingFeed || !editName.trim()) return;
+    setSavingEdit(true);
+    try {
+      await updateFeed(editingFeed.id, {
+        name: editName.trim(),
+        intro: editIntro.trim(),
+      });
+      setFeeds((prev) =>
+        prev.map((item) =>
+          item.id === editingFeed.id
+            ? { ...item, name: editName.trim(), mp_intro: editIntro.trim() }
+            : item
+        )
+      );
+      notifications.show({ color: 'teal', message: '公众号名称配置成功！' });
+      setEditModalOpen(false);
+    } catch {
+      // error handled
+    } finally {
+      setSavingEdit(false);
     }
   };
 
@@ -267,9 +307,21 @@ export function FeedsPage() {
                       style={{ border: '1px solid var(--mantine-color-default-border)' }}
                     />
                     <Box style={{ overflow: 'hidden' }}>
-                      <Text fw={600} size="sm" lineClamp={1}>
-                        {feed.name}
-                      </Text>
+                      <Group gap={4} wrap="nowrap" align="center">
+                        <Text fw={600} size="sm" lineClamp={1}>
+                          {feed.name}
+                        </Text>
+                        <Tooltip label="配置公众号名称">
+                          <ActionIcon
+                            variant="subtle"
+                            size="xs"
+                            color="gray"
+                            onClick={() => handleOpenEdit(feed)}
+                          >
+                            <IconSettings size={13} />
+                          </ActionIcon>
+                        </Tooltip>
+                      </Group>
                       <Badge size="xs" variant="light" color={feed.status === 1 ? 'teal' : 'gray'}>
                         {feed.article_count || 0} 篇文章
                       </Badge>
@@ -305,6 +357,12 @@ export function FeedsPage() {
                       <Menu.Item onClick={() => handleCopyRss(feed.id, 'json')}>复制 JSON</Menu.Item>
                     </Menu.Dropdown>
                   </Menu>
+
+                  <Tooltip label="配置公众号名称">
+                    <ActionIcon variant="subtle" size="sm" onClick={() => handleOpenEdit(feed)}>
+                      <IconSettings size={16} />
+                    </ActionIcon>
+                  </Tooltip>
 
                   <Tooltip label="手动刷新更新文章">
                     <ActionIcon variant="subtle" size="sm" onClick={() => handleRefresh(feed)}>
@@ -397,6 +455,41 @@ export function FeedsPage() {
             </Button>
             <Button loading={adding} onClick={handleAddSubmit} color="blue">
               确认订阅
+            </Button>
+          </Group>
+        </Stack>
+      </Modal>
+
+      {/* Edit Subscription Modal */}
+      <Modal
+        opened={editModalOpen}
+        onClose={() => setEditModalOpen(false)}
+        title="配置公众号信息"
+        centered
+        radius="md"
+      >
+        <Stack gap="md">
+          <TextInput
+            label="公众号名称"
+            placeholder="自定义或修正公众号名称"
+            value={editName}
+            onChange={(e) => setEditName(e.target.value)}
+            required
+          />
+
+          <TextInput
+            label="公众号简介 (可选)"
+            placeholder="输入公众号简介"
+            value={editIntro}
+            onChange={(e) => setEditIntro(e.target.value)}
+          />
+
+          <Group justify="flex-end" mt="md">
+            <Button variant="default" onClick={() => setEditModalOpen(false)}>
+              取消
+            </Button>
+            <Button loading={savingEdit} onClick={handleSaveEdit} color="blue">
+              保存修改
             </Button>
           </Group>
         </Stack>
