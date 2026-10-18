@@ -1,4 +1,4 @@
-blank_issues_enabled: false
+blank_issues_enabled: true
 contact_links:
   - name: 📚 WeFeed 官方使用文档
     url: https://github.com/Aquarius-Situla/we-feed#readme

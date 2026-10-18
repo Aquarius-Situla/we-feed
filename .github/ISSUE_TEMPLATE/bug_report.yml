@@ -11,7 +11,7 @@ body:
   - type: checkboxes
     id: checklist
     attributes:
-      title: "提交前检查"
+      label: "提交前检查"
       description: "请确认以下项目以帮助我们更快定位问题："
       options:
         - label: "我已在 Issue 列表中搜索过，确认没有相同或类似的问题已被提出"
@@ -22,7 +22,7 @@ body:
   - type: dropdown
     id: deployment
     attributes:
-      title: "部署方式"
+      label: "部署方式"
       description: "你使用了哪种方式部署 WeFeed？"
       options:
         - "Docker 单容器 (docker run)"
@@ -36,7 +36,7 @@ body:
   - type: input
     id: version
     attributes:
-      title: "镜像版本 / 源码 Commit"
+      label: "镜像版本 / 源码 Commit"
       description: "请提供正在运行的镜像 Tag 或 Git Commit Hash"
       placeholder: "例如: latest 或 v1.5.5 或 81d9a69"
     validations:
@@ -45,7 +45,7 @@ body:
   - type: dropdown
     id: architecture
     attributes:
-      title: "操作系统与硬件架构"
+      label: "操作系统与硬件架构"
       description: "宿主机运行环境是什么？"
       options:
         - "Linux x86_64 / amd64"
@@ -60,7 +60,7 @@ body:
   - type: textarea
     id: reproduce
     attributes:
-      title: "重现步骤"
+      label: "重现步骤"
       description: "清晰列出复现此问题的具体步骤"
       placeholder: |
         1. 进入后台「...」
@@ -73,7 +73,7 @@ body:
   - type: textarea
     id: expected_vs_actual
     attributes:
-      title: "预期行为与实际现象"
+      label: "预期行为与实际现象"
       description: "你期望发生什么，以及实际上发生了什么"
       placeholder: |
         - 预期行为：...
@@ -84,7 +84,7 @@ body:
   - type: textarea
     id: logs
     attributes:
-      title: "容器日志 / 控制台报错"
+      label: "容器日志 / 控制台报错"
       description: "请提供 `docker logs we-feed` 输出或浏览器 F12 控制台的关键报错"
       render: shell
       placeholder: "粘贴相关日志输出..."
@@ -92,5 +92,5 @@ body:
   - type: textarea
     id: screenshots
     attributes:
-      title: "截图证据 / 补充上下文"
+      label: "截图证据 / 补充上下文"
       description: "如涉及前端界面问题，请尽量拖拽上传截图"
