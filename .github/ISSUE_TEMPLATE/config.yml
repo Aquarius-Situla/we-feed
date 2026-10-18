@@ -1,0 +1,5 @@
+blank_issues_enabled: false
+contact_links:
+  - name: 📚 WeFeed 官方使用文档
+    url: https://github.com/Aquarius-Situla/we-feed#readme
+    about: 查阅常见部署与配置疑问，如微信读书保活、SSO 信任反代配置等。

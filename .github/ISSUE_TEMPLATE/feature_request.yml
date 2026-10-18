@@ -1,0 +1,39 @@
+name: "✨ 功能建议 (Feature Request)"
+description: "为 WeFeed 提出新特性、交互改进或抓取规则优化建议"
+title: "[Feature]: "
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        感谢你为 WeFeed 提供建设性想法！良好的功能建议有助于让微信公众号 RSS 化体验更加纯净与强大。
+
+  - type: textarea
+    id: problem
+    attributes:
+      title: "需求背景与痛点"
+      description: "是什么场景促使你提出该功能？当前的使用流程中有什么不便？"
+      placeholder: "在 ... 场景下，我发现现有的功能无法满足 ...，因为 ..."
+    validations:
+      required: true
+
+  - type: textarea
+    id: solution
+    attributes:
+      title: "期望的解决方案"
+      description: "你希望 WeFeed 如何实现或呈现这个功能？"
+      placeholder: "期望在 ... 页面增加一个 ... 开关/选项，或者在抓取时 ..."
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      title: "备选方案与折中尝试"
+      description: "你是否尝试或考虑过其他变通方法？"
+
+  - type: textarea
+    id: context
+    attributes:
+      title: "参考资料 / 补充说明"
+      description: "任何相关的文档链接、竞品实现参考或设想草图"

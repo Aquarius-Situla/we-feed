@@ -1,0 +1,96 @@
+name: "🐛 Bug 报告 (Bug Report)"
+description: "提交 WeFeed 在运行、订阅、抓取或界面交互过程中遇到的异常"
+title: "[Bug]: "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        感谢向 WeFeed 反馈问题！在提交之前，请确保你已经查阅过已有的 Issue 和项目文档。
+
+  - type: checkboxes
+    id: checklist
+    attributes:
+      title: "提交前检查"
+      description: "请确认以下项目以帮助我们更快定位问题："
+      options:
+        - label: "我已在 Issue 列表中搜索过，确认没有相同或类似的问题已被提出"
+          required: true
+        - label: "我正在使用最新版本的镜像（`ghcr.io/aquarius-situla/we-feed:latest`）或已核对过最新 Commit"
+          required: true
+
+  - type: dropdown
+    id: deployment
+    attributes:
+      title: "部署方式"
+      description: "你使用了哪种方式部署 WeFeed？"
+      options:
+        - "Docker 单容器 (docker run)"
+        - "Docker Compose"
+        - "Kubernetes / K8s"
+        - "本地 Python 源码直接运行"
+        - "其他"
+    validations:
+      required: true
+
+  - type: input
+    id: version
+    attributes:
+      title: "镜像版本 / 源码 Commit"
+      description: "请提供正在运行的镜像 Tag 或 Git Commit Hash"
+      placeholder: "例如: latest 或 v1.5.5 或 81d9a69"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: architecture
+    attributes:
+      title: "操作系统与硬件架构"
+      description: "宿主机运行环境是什么？"
+      options:
+        - "Linux x86_64 / amd64"
+        - "Linux aarch64 / arm64"
+        - "Synology / QNAP NAS"
+        - "macOS (Apple Silicon)"
+        - "Windows WSL2"
+        - "其他"
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduce
+    attributes:
+      title: "重现步骤"
+      description: "清晰列出复现此问题的具体步骤"
+      placeholder: |
+        1. 进入后台「...」
+        2. 点击「...」
+        3. 输入「...」
+        4. 出现错误
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected_vs_actual
+    attributes:
+      title: "预期行为与实际现象"
+      description: "你期望发生什么，以及实际上发生了什么"
+      placeholder: |
+        - 预期行为：...
+        - 实际现象：...
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      title: "容器日志 / 控制台报错"
+      description: "请提供 `docker logs we-feed` 输出或浏览器 F12 控制台的关键报错"
+      render: shell
+      placeholder: "粘贴相关日志输出..."
+
+  - type: textarea
+    id: screenshots
+    attributes:
+      title: "截图证据 / 补充上下文"
+      description: "如涉及前端界面问题，请尽量拖拽上传截图"
