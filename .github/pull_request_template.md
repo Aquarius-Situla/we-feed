@@ -23,9 +23,9 @@
 
 ---
 
-## 关联 Issue (Linked Issues)
-<!-- 关联的 Issue，例如: Fixes #123, Closes #456 -->
-- 
+## 关联 Issue (Linked Issues - 可选)
+<!-- 关联的 Issue，例如: Fixes #123, Closes #456；若无关联 Issue 可填 N/A -->
+- N/A
 
 ---
 
