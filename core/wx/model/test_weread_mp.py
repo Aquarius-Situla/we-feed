@@ -301,8 +301,9 @@ class WereadMpCollectorTest(unittest.TestCase):
 
         collector.update_mps.assert_not_called()
 
+    @patch("driver.wxarticle.Web.get_article_content", return_value={"publish_time": 1792303881})
     @patch("core.wx.base.RSS.clear_cache")
-    def test_list_failure_falls_back_to_cover_latest_article(self, _clear_cache):
+    def test_list_failure_falls_back_to_cover_latest_article(self, _clear_cache, fetch_article):
         collector = self.make_collector()
         collector._get_mp_articles_page = Mock(
             side_effect=WereadMPAPIError(-2041, "blocked", retriable=False)
@@ -325,7 +326,24 @@ class WereadMpCollectorTest(unittest.TestCase):
         self.assertEqual(len(saved), 1)
         self.assertEqual(saved[0]["title"], "Latest")
         self.assertEqual(saved[0]["url"], "https://mp.weixin.qq.com/s/latest")
+        self.assertEqual(saved[0]["publish_time"], 1792303881)
+        fetch_article.assert_called_once_with("https://mp.weixin.qq.com/s/latest")
         collector.update_mps.assert_called_once()
+
+    @patch("driver.wxarticle.Web.get_article_content", return_value={"publish_time": 0})
+    def test_cover_missing_publish_time_does_not_save(self, _fetch_article):
+        collector = self.make_collector()
+        collector._get_mp_cover = Mock(return_value={
+            "reviewId": "MP_WXS_1_latest", "title": "Latest",
+        })
+        callback = Mock()
+
+        with self.assertRaises(WereadMPAPIError):
+            collector._collect_latest_via_cover(
+                "MP_WXS_1", "MP_WXS_1", "Feed title", False, CallBack=callback,
+            )
+
+        callback.assert_not_called()
 
     @patch("core.wx.base.RSS.clear_cache")
     def test_pagination_counts_groups_not_articles(self, _clear_cache):

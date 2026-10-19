@@ -298,16 +298,26 @@ class MpsWereadMP(MpsWeread):
             return self._get_feed_update_time(Mps_id)
 
         print_info(f"发现新文章: {title}")
+        from driver.wxarticle import Web
+
+        link = build_mp_link_from_review_id(review_id, book_id)
+        article = Web.get_article_content(link)
+        publish_time = article.get("publish_time") or 0
+        if not publish_time:
+            raise WereadMPAPIError(
+                "invalid_publish_time",
+                article.get("fetch_error") or "原文发布时间提取失败",
+            )
         item = {
             "aid": review_id,
             "id": review_id,
             "title": title,
-            "link": build_mp_link_from_review_id(review_id, book_id),
+            "link": link,
             "cover": cover.get("pic") or "",
             "digest": cover.get("digest") or "",
             "content": "",
             "create_time": int(time.time()),
-            "update_time": int(time.time()),
+            "update_time": publish_time,
             "read_num": 0,
             "like_num": 0,
             "item_show_type": 0,
@@ -349,7 +359,7 @@ class MpsWereadMP(MpsWeread):
         - 遇到已入库的文章（``_is_article_gathered``，以 articles 表为已采记录的唯一权威）
         - 列表翻完（空页）或达到 ``weread.mp_max_pages`` 页数上限
 
-        注意：不以 ``Feed.update_time`` 作为停止边界。cover 兜底模式会把
+        注意：不以 ``Feed.update_time`` 作为停止边界。旧版 cover 兜底模式会把
         **抓取时间**（而非文章发布时间）写入 update_time，若按时间停止，
         cover 时代漏采的文章（发布早于上次抓取、但不是当时最新一篇）将被永久
         跳过。以入库记录为边界可以在 cover → 列表切换后一次性补齐这些漏采文章，
