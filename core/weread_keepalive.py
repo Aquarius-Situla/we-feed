@@ -134,9 +134,28 @@ def _refresh_account_cookie(cookie_str: str, current_vid: str, target_url: str, 
 
     if not wr_skey:
         log(f"Cookie 保活提示 (VID: {current_vid or '未知'}): 未从浏览器会话提取到 wr_skey（Cookie 可能已彻底过期需重新扫码）")
+        try:
+            from core.weread_status import update_weread_account_status
+            update_weread_account_status(
+                vid=current_vid,
+                expired=True,
+                error_msg="保活未提取到有效令牌，需重新扫码",
+            )
+        except Exception:
+            pass
         return None, None
 
     log(f"成功提取活跃 Cookie (VID: {wr_vid}): wr_skey={wr_skey[:8]}..., wr_rt={wr_rt[:10] if wr_rt else 'None'}...")
+    try:
+        from core.weread_status import update_weread_account_status
+        update_weread_account_status(
+            vid=str(wr_vid),
+            expired=False,
+            quota_exhausted=False,
+            error_msg="",
+        )
+    except Exception:
+        pass
 
     cookie_parts = []
     for k, v in cookie_dict.items():

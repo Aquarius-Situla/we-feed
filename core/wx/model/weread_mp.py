@@ -135,6 +135,18 @@ def _raise_response_error(payload: dict):
     if code == 0:
         return
     message = payload.get("errMsg") or payload.get("errmsg") or str(code)
+    if code in (-2012, -2010):
+        try:
+            from core.weread_status import update_weread_account_status
+            update_weread_account_status(expired=True, error_msg="登录超时，请重新扫码")
+        except Exception:
+            pass
+    elif code in (-2014, -2041):
+        try:
+            from core.weread_status import update_weread_account_status
+            update_weread_account_status(quota_exhausted=True, error_msg="阅读配额已耗尽")
+        except Exception:
+            pass
     raise WereadMPAPIError(
         code,
         message,

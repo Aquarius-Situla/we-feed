@@ -48,6 +48,7 @@ export function WereadAuthModal({ opened, onClose, onSuccess }: WereadAuthModalP
             title: '微信读书授权成功',
             message: `账号 ${res?.vid || ''} 绑定成功！`,
           });
+          window.dispatchEvent(new CustomEvent('weread-status-updated'));
           onSuccess?.();
           onClose();
         } else if (res?.qr_code === false || res?.expired) {

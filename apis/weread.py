@@ -7,6 +7,7 @@
 import asyncio
 import json
 import os
+import time
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from typing import Optional
@@ -118,14 +119,27 @@ def _account_views(data: dict) -> list:
             "has_ticket": bool(acc.get("ticket", "")),
             # 主账号（数组第一项）等价于旧版的「当前账号」
             "is_primary": idx == 1,
+            "expired": bool(acc.get("expired", False)),
+            "quota_exhausted": bool(acc.get("quota_exhausted", False)),
+            "error_msg": acc.get("error_msg", ""),
+            "avatar": acc.get("avatar", ""),
         })
     return views
 
 
 @router.get("", summary="获取微信读书配置状态")
-async def get_weread_status(current_user=Depends(get_current_user_or_ak)):
+async def get_weread_status(
+    check: bool = False,
+    current_user=Depends(get_current_user_or_ak),
+):
     """获取当前微信读书 Cookie 的配置状态"""
-    data = _load_weread_data()
+    from core.weread_status import check_and_update_status
+
+    # 若需要检查或缓存超过 TTL，执行轻量有效性探测
+    data = check_and_update_status(force=check, cache_ttl=300)
+    if not data:
+        data = _load_weread_data()
+
     config_cookie = app_cfg.get("weread.cookie", "")
     config_ticket = app_cfg.get("weread.ticket", "")
     config_vid = app_cfg.get("weread.vid", "")
@@ -138,11 +152,17 @@ async def get_weread_status(current_user=Depends(get_current_user_or_ak)):
     name = primary.get("name", "") or data.get("name", "")
     gather_model = app_cfg.get("gather.model", "web") or "web"
 
-    # 判断是否已配置
+    # 判断是否已配置及有效性
     has_cookie = bool(cookie and vid)
+    is_expired = bool(primary.get("expired", False)) if has_cookie else False
+    is_valid = bool(has_cookie and not is_expired)
+    error_msg = primary.get("error_msg", "")
 
     return success_response({
         "configured": has_cookie,
+        "valid": is_valid,
+        "expired": is_expired,
+        "error_msg": error_msg,
         # 多账号：账号数量 + 脱敏列表（前端据此渲染「第N个微信」）
         "account_count": len(accounts),
         "accounts": _account_views(data),
@@ -226,6 +246,10 @@ async def save_weread_cookie(
         "vid": vid,
         "ticket": ticket_str if ticket_str is not None else "",
         "name": name_str,
+        "expired": False,
+        "quota_exhausted": False,
+        "error_msg": "",
+        "last_checked_ts": time.time(),
     }
     matched = None
     for acc in accounts:

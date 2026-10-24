@@ -871,6 +871,10 @@ class WereadQRLogin:
                 "cookie": cookie_str,
                 "vid": str(vid),
                 "name": result.get("name", "") or "",
+                "expired": False,
+                "quota_exhausted": False,
+                "error_msg": "",
+                "last_checked_ts": time.time(),
             }
             if existing_idx is not None:
                 # 保留原有 name（如果用户改过）

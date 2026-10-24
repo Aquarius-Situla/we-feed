@@ -40,10 +40,10 @@ export function WeReadPage() {
   const [testing, setTesting] = useState<boolean>(false);
   const [authModalOpen, setAuthModalOpen] = useState<boolean>(false);
 
-  const fetchStatus = async () => {
+  const fetchStatus = async (check = false) => {
     setLoading(true);
     try {
-      const data = await getWereadStatus();
+      const data = await getWereadStatus(check);
       setStatus(data);
     } catch {
       // error handled
@@ -65,12 +65,16 @@ export function WeReadPage() {
         title: '测试连通性成功',
         message: res?.message || '微信读书接口与 Cookie 有效！',
       });
+      await fetchStatus(true);
+      window.dispatchEvent(new CustomEvent('weread-status-updated'));
     } catch (err: any) {
       notifications.show({
         color: 'red',
         title: '测试连接失败',
         message: err?.message || 'Cookie 已失效或连接超时',
       });
+      await fetchStatus(true);
+      window.dispatchEvent(new CustomEvent('weread-status-updated'));
     } finally {
       setTesting(false);
     }
@@ -81,7 +85,8 @@ export function WeReadPage() {
     try {
       await clearWereadCookie(account.vid);
       notifications.show({ color: 'teal', message: '已成功移除该微信读书账号' });
-      fetchStatus();
+      fetchStatus(true);
+      window.dispatchEvent(new CustomEvent('weread-status-updated'));
     } catch {
       // error handled
     }
@@ -129,14 +134,25 @@ export function WeReadPage() {
       ) : (
         <Stack gap="md">
           {status?.configured ? (
-            <Alert
-              icon={<IconCheck size={18} />}
-              title="微信读书通道运行正常"
-              color="teal"
-              radius="md"
-            >
-              已配置可用凭据，容器内置自动保活服务正在持续守护 Cookie 有效性。
-            </Alert>
+            status?.expired ? (
+              <Alert
+                icon={<IconAlertCircle size={18} />}
+                title="微信读书登录凭据已失效"
+                color="red"
+                radius="md"
+              >
+                当前微信读书账号凭据已过期（微信读书提示登录超时），公众号文章抓取已暂停。请点击右上角“扫码添加账号”重新扫码登录以恢复。
+              </Alert>
+            ) : (
+              <Alert
+                icon={<IconCheck size={18} />}
+                title="微信读书通道运行正常"
+                color="teal"
+                radius="md"
+              >
+                已配置可用凭据，容器内置自动保活服务正在持续守护 Cookie 有效性。
+              </Alert>
+            )
           ) : (
             <Alert
               icon={<IconAlertCircle size={18} />}
@@ -231,7 +247,7 @@ export function WeReadPage() {
       <WereadAuthModal
         opened={authModalOpen}
         onClose={() => setAuthModalOpen(false)}
-        onSuccess={fetchStatus}
+        onSuccess={() => fetchStatus(true)}
       />
     </Stack>
   );

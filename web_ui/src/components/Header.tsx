@@ -42,16 +42,37 @@ export function Header({ onOpenWereadAuth, onOpenWechatAuth }: HeaderProps) {
   const computedColorScheme = useComputedColorScheme('light', { getInitialValueInEffect: true });
 
   const [username, setUsername] = useState<string>('Admin');
-  const [wereadConfigured, setWereadConfigured] = useState<boolean>(false);
+  const [wereadState, setWereadState] = useState<{
+    configured: boolean;
+    expired: boolean;
+  }>({
+    configured: false,
+    expired: false,
+  });
+
+  const refreshWereadStatus = () => {
+    getWereadStatus()
+      .then((res) => {
+        setWereadState({
+          configured: Boolean(res.configured),
+          expired: Boolean(res.expired),
+        });
+      })
+      .catch(() => {});
+  };
 
   useEffect(() => {
     getCurrentUser()
       .then((user) => setUsername(user.username || 'Admin'))
       .catch(() => {});
 
-    getWereadStatus()
-      .then((res) => setWereadConfigured(Boolean(res.configured)))
-      .catch(() => {});
+    refreshWereadStatus();
+
+    const handleStatusUpdate = () => refreshWereadStatus();
+    window.addEventListener('weread-status-updated', handleStatusUpdate);
+    return () => {
+      window.removeEventListener('weread-status-updated', handleStatusUpdate);
+    };
   }, []);
 
   const handleLogout = async () => {
@@ -104,18 +125,48 @@ export function Header({ onOpenWereadAuth, onOpenWechatAuth }: HeaderProps) {
         {/* Right: Status Pills & Action Icons */}
         <Group gap="sm">
           {/* WeRead Status & Quick Auth */}
-          <Tooltip label={wereadConfigured ? '微信读书已授权 (点击添加/切换账号)' : '微信读书未授权 (点击扫码绑定)'}>
-            <Badge
-              size="lg"
-              variant={wereadConfigured ? 'light' : 'filled'}
-              color={wereadConfigured ? 'teal' : 'orange'}
-              style={{ cursor: 'pointer' }}
-              leftSection={wereadConfigured ? <IconCheck size={14} /> : <IconAlertCircle size={14} />}
-              onClick={onOpenWereadAuth}
-            >
-              微信读书
-            </Badge>
-          </Tooltip>
+          {wereadState.configured ? (
+            wereadState.expired ? (
+              <Tooltip label="微信读书登录已失效，点击重新扫码">
+                <Badge
+                  size="lg"
+                  variant="filled"
+                  color="red"
+                  style={{ cursor: 'pointer' }}
+                  leftSection={<IconAlertCircle size={14} />}
+                  onClick={onOpenWereadAuth}
+                >
+                  微信读书 (已失效)
+                </Badge>
+              </Tooltip>
+            ) : (
+              <Tooltip label="微信读书已授权 (点击添加/切换账号)">
+                <Badge
+                  size="lg"
+                  variant="light"
+                  color="teal"
+                  style={{ cursor: 'pointer' }}
+                  leftSection={<IconCheck size={14} />}
+                  onClick={onOpenWereadAuth}
+                >
+                  微信读书
+                </Badge>
+              </Tooltip>
+            )
+          ) : (
+            <Tooltip label="微信读书未授权 (点击扫码绑定)">
+              <Badge
+                size="lg"
+                variant="filled"
+                color="orange"
+                style={{ cursor: 'pointer' }}
+                leftSection={<IconAlertCircle size={14} />}
+                onClick={onOpenWereadAuth}
+              >
+                微信读书
+              </Badge>
+            </Tooltip>
+          )}
 
           {/* WeChat MP QR Quick Auth */}
           <Tooltip label="公众号扫码登录授权">

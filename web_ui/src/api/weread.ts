@@ -6,10 +6,14 @@ export interface WereadAccount {
   avatar?: string;
   expired?: boolean;
   quota_exhausted?: boolean;
+  error_msg?: string;
 }
 
 export interface WereadStatusResponse {
   configured: boolean;
+  valid?: boolean;
+  expired?: boolean;
+  error_msg?: string;
   vid?: string;
   name?: string;
   accounts?: WereadAccount[];
@@ -17,8 +21,8 @@ export interface WereadStatusResponse {
   browser_path?: string;
 }
 
-export async function getWereadStatus(): Promise<WereadStatusResponse> {
-  const res: any = await client.get('/weread');
+export async function getWereadStatus(check = false): Promise<WereadStatusResponse> {
+  const res: any = await client.get('/weread', { params: { check } });
   return res?.data || res;
 }
 

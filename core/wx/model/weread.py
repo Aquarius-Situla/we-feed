@@ -179,16 +179,41 @@ class MpsWeread(WxGather):
             except requests.RequestException as exc:
                 raise WereadMPAPIError("network_error", str(exc)) from exc
 
-            # 检查响应中的配额耗尽信号
+            # 检查响应中的配额耗尽或登录失效信号
             is_quota_exhausted = False
             if resp.status_code == 499:
                 is_quota_exhausted = True
+                try:
+                    from core.weread_status import update_weread_account_status
+                    update_weread_account_status(
+                        vid=self._weread_vid,
+                        quota_exhausted=True,
+                        error_msg="阅读配额已耗尽 (HTTP 499)",
+                    )
+                except Exception:
+                    pass
             elif resp.status_code == 200:
                 try:
                     payload = resp.json()
                     code = payload.get("errcode", payload.get("errCode", 0))
                     if code in (-2014, -2012):
                         is_quota_exhausted = True
+                        try:
+                            from core.weread_status import update_weread_account_status
+                            if code == -2012:
+                                update_weread_account_status(
+                                    vid=self._weread_vid,
+                                    expired=True,
+                                    error_msg="登录超时，请重新扫码",
+                                )
+                            elif code == -2014:
+                                update_weread_account_status(
+                                    vid=self._weread_vid,
+                                    quota_exhausted=True,
+                                    error_msg="阅读配额已耗尽 (-2014)",
+                                )
+                        except Exception:
+                            pass
                 except (ValueError, AttributeError):
                     pass
 
