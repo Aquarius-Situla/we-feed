@@ -7,7 +7,7 @@ import base64
 import re
 import os
 import asyncio
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 from typing import Dict
 from bs4 import BeautifulSoup
 
@@ -383,34 +383,37 @@ class WXArticleFetcher:
         提取发布时间(异步)
         """
         try:
-            # 尝试从 meta 标签获取
-            publish_time_str = await page.locator('#publish_time').text_content()
-            
-            if publish_time_str:
-                return self._convert_publish_time_to_timestamp(publish_time_str)
-                
-            # 尝试从页面内容获取
             content = await page.content()
-            
-            # 常见的时间格式
+            # ct 保留原文秒级精度，优先于只有分钟精度的页面文字。
+            match = re.search(r"\bct\s*=\s*[\"']?(\d{10})\b", content)
+            if match:
+                return int(match.group(1))
+
+            publish_time_element = page.locator('#publish_time')
+            if await publish_time_element.count():
+                publish_time_str = await publish_time_element.text_content()
+                if publish_time_str:
+                    timestamp = self._convert_publish_time_to_timestamp(publish_time_str.strip())
+                    if timestamp:
+                        return timestamp
+
             patterns = [
                 r'publish_time\s*=\s*["\']([^"\']+)["\']',
-                r'var\s+publish_time\s*=\s*["\']([^"\']+)["\']',
                 r'create_time\s*=\s*["\']([^"\']+)["\']',
             ]
-            
             for pattern in patterns:
                 match = re.search(pattern, content)
                 if match:
-                    return self._convert_publish_time_to_timestamp(match.group(1))
-                    
-            # 返回当前时间
-            return int(datetime.now().timestamp())
-            
+                    timestamp = self._convert_publish_time_to_timestamp(match.group(1))
+                    if timestamp:
+                        return timestamp
+
+            print_warning("提取发布时间失败: 页面中没有有效的发布时间")
+            return 0
         except Exception as e:
             print_warning(f"提取发布时间失败: {str(e)}")
-            return int(datetime.now().timestamp())
-            
+            return 0
+
     async def _detect_article_type(self, page) -> int:
         """
         检测文章类型(异步)
@@ -496,7 +499,7 @@ class WXArticleFetcher:
             for fmt in formats:
                 try:
                     if fmt == "%m月%d日":
-                        current_date = datetime.now()
+                        current_date = datetime.now(timezone(timedelta(hours=8))).replace(tzinfo=None)
                         current_year = current_date.year
                         full_time_str = f"{current_year}年{normalized_str}"
                         dt = datetime.strptime(full_time_str, "%Y年%m月%d日")
@@ -505,15 +508,15 @@ class WXArticleFetcher:
                             dt = dt.replace(year=current_year - 1)
                     else:
                         dt = datetime.strptime(normalized_str, fmt)
-                    return int(dt.timestamp())
+                    return int(dt.replace(tzinfo=timezone(timedelta(hours=8))).timestamp())
                 except ValueError:
                     continue
                     
-            return int(datetime.now().timestamp())
+            return 0
             
         except Exception as e:
             print_error(f"时间转换失败: {e}")
-            return int(datetime.now().timestamp())
+            return 0
             
     def _extract_biz(self, url: str, content: str) -> str:
         """

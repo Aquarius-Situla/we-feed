@@ -187,7 +187,7 @@ class MpsWeread(WxGather):
                 try:
                     payload = resp.json()
                     code = payload.get("errcode", payload.get("errCode", 0))
-                    if code in (-2014, -2041, -2012):
+                    if code in (-2014, -2012):
                         is_quota_exhausted = True
                 except (ValueError, AttributeError):
                     pass

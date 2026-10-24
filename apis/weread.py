@@ -4,6 +4,7 @@
 提供 Cookie 配置、连接测试、手动采集等功能
 """
 
+import asyncio
 import json
 import os
 from fastapi import APIRouter, Depends, HTTPException
@@ -477,7 +478,8 @@ async def collect_weread_notes(
             return False
 
     try:
-        wx.get_Articles(
+        await asyncio.to_thread(
+            wx.get_Articles,
             faker_id=faker_id or None,
             Mps_id=mp_id,
             Mps_title=req.mp_name or faker_id or "微信读书",

@@ -1,3 +1,4 @@
+import asyncio
 from logging import info
 from fastapi import APIRouter, Depends, HTTPException, status, Query, Body, UploadFile, File, Request
 from fastapi.responses import FileResponse
@@ -405,12 +406,13 @@ async def update_mps(
                     message="请不要频繁更新操作",
                     data={"time_span":time_span}
                 )
-        # 同步采集，等待结果返回；失败时把真实原因透出给前端，
-        # 避免「异步线程 + 异常被吞」导致前端只看到“刷新成功”但实际 0 篇入库。
+        # 在线程中执行同步采集，避免浏览器事件循环与接口事件循环冲突。
+        # 等待结果返回，采集异常仍由下方处理并透出给前端。
         from core.wx import WxGather
         wx = WxGather().Model()
         try:
-            wx.get_Articles(
+            await asyncio.to_thread(
+                wx.get_Articles,
                 mp.faker_id,
                 Mps_id=mp.id,
                 Mps_title=mp.mp_name,
