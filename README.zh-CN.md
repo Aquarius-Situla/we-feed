@@ -166,12 +166,18 @@ docker run -d \
 
 ---
 
+## ⭐ 支持项目 (Support Us)
+
+如果 WeFeed 改善了你的公众号文章订阅与阅读体验，欢迎在 [GitHub](https://github.com/Aquarius-Situla/we-feed) 上为本项目点亮一颗 **Star** ⭐！你的支持是我们持续迭代与维护的最大动力。
+
+---
+
 ## 📜 开源协议与致谢 (License & Acknowledgements)
 
 本项目采用 **[GNU Affero General Public License v3.0 or later (AGPL-3.0-or-later)](LICENSE)** 协议开源。
 
 ```text
-Copyright (C) 2026 Situla <https://github.com/Aquarius-Situla/we-feed>
+Copyright (C) 2026 WeFeed Community <https://github.com/Aquarius-Situla/we-feed>
 Copyright (C) 2024-2026 rachelos <https://github.com/rachelos/we-mp-rss>
 ```
 

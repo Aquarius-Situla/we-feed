@@ -166,12 +166,18 @@ docker run -d \
 
 ---
 
+## ⭐ Support the Project
+
+If WeFeed improves your feed reading workflow, please consider giving us a **Star** on [GitHub](https://github.com/Aquarius-Situla/we-feed) ⭐! Your support is the best motivation for ongoing maintenance and new features.
+
+---
+
 ## 📜 License & Acknowledgements
 
 This project is licensed under the **[GNU Affero General Public License v3.0 or later (AGPL-3.0-or-later)](LICENSE)**.
 
 ```text
-Copyright (C) 2026 Situla <https://github.com/Aquarius-Situla/we-feed>
+Copyright (C) 2026 WeFeed Community <https://github.com/Aquarius-Situla/we-feed>
 Copyright (C) 2024-2026 rachelos <https://github.com/rachelos/we-mp-rss>
 ```
 
