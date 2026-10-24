@@ -301,9 +301,9 @@ class WereadMpCollectorTest(unittest.TestCase):
 
         collector.update_mps.assert_not_called()
 
-    @patch("driver.wxarticle.Web.get_article_content", return_value={"publish_time": 1792303881})
+    @patch("core.wx.model.weread_mp.fetch_article_publish_time", return_value=1792303881)
     @patch("core.wx.base.RSS.clear_cache")
-    def test_list_failure_falls_back_to_cover_latest_article(self, _clear_cache, fetch_article):
+    def test_list_failure_falls_back_to_cover_latest_article(self, _clear_cache, fetch_time):
         collector = self.make_collector()
         collector._get_mp_articles_page = Mock(
             side_effect=WereadMPAPIError(-2041, "blocked", retriable=False)
@@ -327,23 +327,36 @@ class WereadMpCollectorTest(unittest.TestCase):
         self.assertEqual(saved[0]["title"], "Latest")
         self.assertEqual(saved[0]["url"], "https://mp.weixin.qq.com/s/latest")
         self.assertEqual(saved[0]["publish_time"], 1792303881)
-        fetch_article.assert_called_once_with("https://mp.weixin.qq.com/s/latest")
+        fetch_time.assert_called_once()
         collector.update_mps.assert_called_once()
 
-    @patch("driver.wxarticle.Web.get_article_content", return_value={"publish_time": 0})
-    def test_cover_missing_publish_time_does_not_save(self, _fetch_article):
+    @patch("time.time", return_value=1700000000)
+    @patch("core.wx.model.weread_mp.fetch_article_publish_time", return_value=0)
+    def test_cover_missing_publish_time_falls_back_to_current_time(self, _fetch_time, _mock_time):
         collector = self.make_collector()
         collector._get_mp_cover = Mock(return_value={
             "reviewId": "MP_WXS_1_latest", "title": "Latest",
         })
-        callback = Mock()
+        saved = []
 
-        with self.assertRaises(WereadMPAPIError):
-            collector._collect_latest_via_cover(
-                "MP_WXS_1", "MP_WXS_1", "Feed title", False, CallBack=callback,
-            )
+        update_time = collector._collect_latest_via_cover(
+            "MP_WXS_1", "MP_WXS_1", "Feed title", False,
+            CallBack=lambda article: saved.append(article) or True,
+        )
 
-        callback.assert_not_called()
+        self.assertEqual(len(saved), 1)
+        self.assertEqual(saved[0]["publish_time"], 1700000000)
+        self.assertEqual(update_time, 1700000000)
+
+    def test_extract_publish_time_from_html(self):
+        from core.wx.model.weread_mp import extract_publish_time_from_html
+
+        self.assertEqual(extract_publish_time_from_html('var ct = "1792123320";'), 1792123320)
+        self.assertEqual(extract_publish_time_from_html('var oriCreateTime = "1792123321";'), 1792123321)
+        self.assertEqual(extract_publish_time_from_html('var createTimestamp = "1792123322";'), 1792123322)
+        self.assertEqual(extract_publish_time_from_html('create_time = "1792123323"'), 1792123323)
+        self.assertEqual(extract_publish_time_from_html('ori_create_time: "1792123324"'), 1792123324)
+        self.assertEqual(extract_publish_time_from_html('<html>no time</html>'), 0)
 
     @patch("core.wx.base.RSS.clear_cache")
     def test_pagination_counts_groups_not_articles(self, _clear_cache):

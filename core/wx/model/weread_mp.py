@@ -73,6 +73,59 @@ def build_mp_link_from_review_id(review_id: str, book_id: str = "") -> str:
     return f"https://mp.weixin.qq.com/s/{quote(token, safe='')}"
 
 
+def extract_publish_time_from_html(html: str) -> int:
+    """从微信公众号文章 HTML 源码中提取发布时间戳（秒级）"""
+    if not html:
+        return 0
+    patterns = [
+        r'\bvar\s+ct\s*=\s*["\'](\d{10})["\']',
+        r'\bct\s*=\s*["\'](\d{10})["\']',
+        r'\boriCreateTime\s*=\s*["\'](\d{10})["\']',
+        r'\bcreateTimestamp\s*=\s*["\'](\d{10})["\']',
+        r'\bcreate_time\s*=\s*["\'](\d{10})["\']',
+        r'\bori_create_time\s*:\s*["\'](\d{10})["\']',
+    ]
+    for pattern in patterns:
+        match = re.search(pattern, html)
+        if match:
+            try:
+                ts = int(match.group(1))
+                if ts > 0:
+                    return ts
+            except (ValueError, TypeError):
+                continue
+    return 0
+
+
+def fetch_article_publish_time(url: str, timeout: int = 8, proxies: dict = None) -> int:
+    """通过轻量 HTTP GET 请求从微信公众号文章页面提取真实发布时间。
+
+    避免调用重型 Playwright Chromium 浏览器，执行耗时极低且零额外内存开销。
+    提取失败时返回 0，由调用方平滑降级。
+    """
+    if not url:
+        return 0
+    import requests
+
+    headers = {
+        "User-Agent": (
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
+            "(KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        ),
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+        "Accept-Language": "zh-CN,zh;q=0.9",
+    }
+    try:
+        resp = requests.get(url, headers=headers, timeout=timeout, proxies=proxies)
+        if resp.status_code == 200:
+            ts = extract_publish_time_from_html(resp.text)
+            if ts:
+                return ts
+    except Exception as exc:
+        logger.warning(f"轻量请求提取文章发布时间失败 [{url}]: {exc}")
+    return 0
+
+
 def _raise_response_error(payload: dict):
     code = payload.get("errCode", payload.get("errcode", 0))
     try:
@@ -298,16 +351,11 @@ class MpsWereadMP(MpsWeread):
             return self._get_feed_update_time(Mps_id)
 
         print_info(f"发现新文章: {title}")
-        from driver.wxarticle import Web
-
         link = build_mp_link_from_review_id(review_id, book_id)
-        article = Web.get_article_content(link)
-        publish_time = article.get("publish_time") or 0
+        publish_time = fetch_article_publish_time(link, proxies=self._get_proxies())
         if not publish_time:
-            raise WereadMPAPIError(
-                "invalid_publish_time",
-                article.get("fetch_error") or "原文发布时间提取失败",
-            )
+            logger.warning(f"未能从原文提取发布时间 [{link}]，将降级使用当前时间")
+            publish_time = int(time.time())
         item = {
             "aid": review_id,
             "id": review_id,
@@ -519,7 +567,7 @@ class MpsWereadMP(MpsWeread):
                     # 等真实错误，直接上抛，下次任务重试。
                     raise
                 print_warning(
-                    f"[{Mps_title}] 文章列表接口不可用({exc})，回退到仅取最新一篇"
+                    f"[{Mps_title}] 文章列表接口不可用或受限({exc})，回退到仅取最新一篇"
                 )
                 latest_publish_time = self._collect_latest_via_cover(
                     book_id,
