@@ -141,7 +141,7 @@ def _raise_response_error(payload: dict):
             update_weread_account_status(expired=True, error_msg="登录超时，请重新扫码")
         except Exception:
             pass
-    elif code in (-2014, -2041):
+    elif code == -2014:
         try:
             from core.weread_status import update_weread_account_status
             update_weread_account_status(quota_exhausted=True, error_msg="阅读配额已耗尽")

@@ -180,9 +180,11 @@ class MpsWeread(WxGather):
                 raise WereadMPAPIError("network_error", str(exc)) from exc
 
             # 检查响应中的配额耗尽或登录失效信号
-            is_quota_exhausted = False
+            is_auth_or_quota_failure = False
+            last_err_code = 0
             if resp.status_code == 499:
-                is_quota_exhausted = True
+                is_auth_or_quota_failure = True
+                last_err_code = 499
                 try:
                     from core.weread_status import update_weread_account_status
                     update_weread_account_status(
@@ -197,7 +199,8 @@ class MpsWeread(WxGather):
                     payload = resp.json()
                     code = payload.get("errcode", payload.get("errCode", 0))
                     if code in (-2014, -2012):
-                        is_quota_exhausted = True
+                        is_auth_or_quota_failure = True
+                        last_err_code = code
                         try:
                             from core.weread_status import update_weread_account_status
                             if code == -2012:
@@ -217,23 +220,31 @@ class MpsWeread(WxGather):
                 except (ValueError, AttributeError):
                     pass
 
-            if is_quota_exhausted:
+            if is_auth_or_quota_failure:
                 if self._current_account_idx not in tried_accounts:
                     tried_accounts.add(self._current_account_idx)
                 idx_before = self._current_account_idx
+                reason_str = "登录超时" if last_err_code == -2012 else "配额耗尽"
                 if self._switch_weread_account() and self._current_account_idx not in tried_accounts:
                     logger.info(
-                        f"配额耗尽（当前账号 {idx_before}），"
+                        f"{reason_str}（当前账号 {idx_before}），"
                         f"切换到账号 {self._current_account_idx}（{self._weread_name or '未命名'}）重试"
                     )
                     continue
                 # 所有账号都试过了
-                self._weread_quota_exhausted = True
-                raise WereadMPAPIError(
-                    499 if resp.status_code == 499 else (code if 'code' in locals() else -2041),
-                    f"所有账号配额均已耗尽（{len(tried_accounts)} 个）",
-                    retriable=False,
-                )
+                if last_err_code == -2012:
+                    raise WereadMPAPIError(
+                        -2012,
+                        f"微信读书登录已超时（{len(tried_accounts)} 个账号），请重新扫码或等待保活刷新",
+                        retriable=False,
+                    )
+                else:
+                    self._weread_quota_exhausted = True
+                    raise WereadMPAPIError(
+                        last_err_code or 499,
+                        f"所有账号今日配额均已耗尽（{len(tried_accounts)} 个）",
+                        retriable=False,
+                    )
 
             self._weread_quota_exhausted = False
             return resp

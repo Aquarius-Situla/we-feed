@@ -36,7 +36,7 @@ def verify_weread_cookie_quick(
 ) -> Tuple[bool, str, Dict[str, Any]]:
     """
     轻量快速验证微信读书 Cookie 是否处于有效登录态。
-    请求 https://weread.qq.com/web/user
+    请求 https://weread.qq.com/web/shelf/sync
     
     返回: (is_valid: bool, error_msg: str, user_info: dict)
     """
@@ -53,7 +53,8 @@ def verify_weread_cookie_quick(
 
     try:
         r = requests.get(
-            "https://weread.qq.com/web/user",
+            "https://weread.qq.com/web/shelf/sync",
+            params={"userVid": str(vid) if vid else "", "synckey": 0},
             headers=headers,
             timeout=timeout,
         )
@@ -64,12 +65,12 @@ def verify_weread_cookie_quick(
                 return False, "响应不是有效 JSON", {}
 
             code = data.get("errCode", data.get("errcode", 0))
-            if code == 0 and not data.get("errMsg"):
+            if code == 0 and ("books" in data or "bookCount" in data or "synckey" in data or not data.get("errMsg")):
                 return True, "", data
 
             if code in (-2012, -2010):
                 return False, data.get("errMsg") or "登录超时，请重新扫码", data
-            elif code in (-2014, -2041):
+            elif code == -2014:
                 return False, data.get("errMsg") or "阅读配额已耗尽", data
             else:
                 msg = data.get("errMsg") or f"接口返回错误码: {code}"
