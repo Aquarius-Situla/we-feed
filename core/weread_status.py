@@ -8,6 +8,7 @@ import os
 import time
 import json
 import logging
+import datetime
 from typing import Optional, Tuple, Dict, Any
 import requests
 
@@ -182,11 +183,16 @@ def check_and_update_status(
                         acc["expired"] = not is_valid
                         acc["error_msg"] = err
                         acc["last_checked_ts"] = time.time()
-                        if is_valid and user_info:
-                            if user_info.get("name") and not acc.get("name"):
-                                acc["name"] = user_info["name"]
-                            if user_info.get("avatar"):
-                                acc["avatar"] = user_info["avatar"]
+                        if is_valid:
+                            # 每日 0 点重置微信读书阅读配额；若上次检查非当天，则自动重置配额耗尽标记
+                            last_date = datetime.date.fromtimestamp(last_ts) if last_ts else None
+                            if last_date != datetime.date.today():
+                                acc["quota_exhausted"] = False
+                            if user_info:
+                                if user_info.get("name") and not acc.get("name"):
+                                    acc["name"] = user_info["name"]
+                                if user_info.get("avatar"):
+                                    acc["avatar"] = user_info["avatar"]
                         need_save = True
         else:
             cookie = data.get("cookie", "")
@@ -198,6 +204,10 @@ def check_and_update_status(
                     data["expired"] = not is_valid
                     data["error_msg"] = err
                     data["last_checked_ts"] = time.time()
+                    if is_valid:
+                        last_date = datetime.date.fromtimestamp(last_ts) if last_ts else None
+                        if last_date != datetime.date.today():
+                            data["quota_exhausted"] = False
                     need_save = True
 
         if need_save:
